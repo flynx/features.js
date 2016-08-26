@@ -8,6 +8,7 @@ function(require){ var module={} // makes module AMD/node compatible...
 /*********************************************************************/
 
 var object = require('ig-object')
+// XXX this is a problem with node/requirejs loading...
 var actions = module.actions = require('./actions')
 
 
