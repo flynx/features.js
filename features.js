@@ -98,7 +98,9 @@ module.FeatureProto = {
 
 		// mixin actions...
 		if(this.actions != null){
-			actions.mixin(this.actions)
+			this.tag ? 
+				actions.mixin(this.actions, {source_tag: this.tag}) 
+				: actions.mixin(this.actions) 
 		}
 
 		// install handlers...
