@@ -42,6 +42,9 @@ var args2array = function(a){ return [].slice.call(a) }
 // 					  making each sub-feature a strict dependency.
 // 	.depends		- feature dependencies -- tags of features that must setup
 // 					  before the feature (list | null)
+// 					  NOTE: a feature can depend on an exclusive tag, this will
+// 					  		remove the need to track which specific exclusive
+// 					  		tagged feature is loaded...
 // 	.exclusive		- feature exclusivity tags (list | null)
 // 					  an exclusivity group enforces that only one feature in
 // 					  it will be run, i.e. the first / highest priority.
@@ -348,6 +351,8 @@ var FeatureSetProto = {
 		var missing = {}
 		var conflicts = {}
 
+		var exclusive = {}
+
 
 		// reverse dependency cache... 
 		var dependants = {}
@@ -394,6 +399,7 @@ var FeatureSetProto = {
 
 			var deps = that[k].depends || []
 			var refs = that[k].suggested || []
+			var excl = that[k].exclusive || []
 
 			deps.forEach(function(n){
 				// expand lst with dependencies....
@@ -407,6 +413,12 @@ var FeatureSetProto = {
 			// expand lst with suggenstions....
 			refs.forEach(function(n){
 				lst.indexOf(n) < 0 && lst.push(n)
+			})
+
+			// build exclusive table...
+			excl.forEach(function(n){
+				var l = exclusive[n] = exclusive[n] || []
+				l.indexOf(k) < 0 && l.push(k)
 			})
 		}
 
@@ -435,7 +447,7 @@ var FeatureSetProto = {
 			.filter(function(e){ return disabled.indexOf(e) < 0 })
 			// build the sort table: [ <priority>, <index>, <elem> ]
 			.map(function(e, i){ return [ that[e].getPriority(), i, e ] })
-			// do the sort...
+			// sort by priority then index...
 			// NOTE: JS compares lists as strings so we have to compare 
 			// 		the list manually...
 			.sort(function(a, b){ return a[0] - b[0] || a[1] - b[1] })
@@ -539,7 +551,19 @@ var FeatureSetProto = {
 
 		for(var i=0; i < lst.length; i++){
 			var k = lst[i]
-			var depends = that[k].depends || []
+			var depends = (that[k].depends || []).slice()
+
+			// replace dependencies that are exclusive tags...
+			Object.keys(exclusive).forEach(function(e){
+				var i = depends.indexOf(e)
+				i >= 0 
+					&& exclusive[e].forEach(function(f){
+						if(lst.indexOf(f) >= 0){
+							console.log('EXCL->DEP', e, f)
+							depends[i] = f
+						}
+					})
+			})
 
 			// list of dependencies to move...
 			var move = []
