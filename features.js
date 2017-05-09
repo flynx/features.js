@@ -45,6 +45,12 @@ var args2array = function(a){ return [].slice.call(a) }
 // 					  NOTE: a feature can depend on an exclusive tag, this will
 // 					  		remove the need to track which specific exclusive
 // 					  		tagged feature is loaded...
+// 					  NOTE: a feature can list disabled (preceded with a "-") 
+// 							feature tags in .depends, this will disabled listed
+// 							features, this is the same as disabling tags in 
+// 							meta-features.
+// 							Semantically this reads as depending on a feature 
+// 							being disabled or not present. 
 // 	.exclusive		- feature exclusivity tags (list | null)
 // 					  an exclusivity group enforces that only one feature in
 // 					  it will be run, i.e. the first / highest priority.
