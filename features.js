@@ -482,7 +482,7 @@ var FeatureSetProto = {
 				// 		with actual feature tags later...
 				// 		if a tag is exclusive then at least one feature 
 				// 		with it is present...
-				if(!that[d] && !exclusive[d]){
+				if(!that[d] && !exclusive[d] && d[0] != '-'){
 					var m = missing[k] = missing[k] || []
 					m.push(d)
 				}
