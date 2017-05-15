@@ -45,12 +45,6 @@ var args2array = function(a){ return [].slice.call(a) }
 // 					  NOTE: a feature can depend on an exclusive tag, this will
 // 					  		remove the need to track which specific exclusive
 // 					  		tagged feature is loaded...
-// 					  NOTE: a feature can list disabled (preceded with a "-") 
-// 							feature tags in .depends, this will disabled listed
-// 							features, this is the same as disabling tags in 
-// 							meta-features.
-// 							Semantically this reads as depending on a feature 
-// 							being disabled or not present. 
 // 	.exclusive		- feature exclusivity tags (list | null)
 // 					  an exclusivity group enforces that only one feature in
 // 					  it will be run, i.e. the first / highest priority.
@@ -484,7 +478,11 @@ var FeatureSetProto = {
 				// NOTE: we do not need to check disabled or unapplicable
 				// 		here as if the feature depended on dropped feature
 				// 		it would have been already dropped too...
-				if(!that[k]){
+				// NOTE: we skip exclusive tags as they will get replaced 
+				// 		with actual feature tags later...
+				// 		if a tag is exclusive then at least one feature 
+				// 		with it is present...
+				if(!that[d] && !exclusive[d]){
 					var m = missing[k] = missing[k] || []
 					m.push(d)
 				}
@@ -565,7 +563,7 @@ var FeatureSetProto = {
 				i >= 0 
 					&& exclusive[e].forEach(function(f){
 						if(lst.indexOf(f) >= 0){
-							console.log('EXCL->DEP', e, f)
+							//console.log('EXCL->DEP', e, f)
 							depends[i] = f
 						}
 					})
@@ -658,7 +656,8 @@ var FeatureSetProto = {
 
 			// missing deps...
 			Object.keys(m).forEach(function(k){
-				report.push(k + ': missing but required by:\n          ' + m[k].join(', '))
+				report.push(k + ': requires following missing features:\n'
+					+'          ' + m[k].join(', '))
 			})
 			report.push('\n')
 
