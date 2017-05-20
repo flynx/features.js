@@ -601,9 +601,25 @@ var FeatureSetProto = {
 				// chain completed -> check and store...
 				if(chain.indexOf(k) >= 0){
 					var c = JSON.stringify(chain)
-					// repeating chain -> loop detected...
+					// repeating chain -> loop or order conflict detected...
 					if(chains.indexOf(c) >= 0){
-						console.error('Feature cyclic dependency:', chain)
+						// format the graph... 
+						// XXX this catches strange things and not only loops...
+						// 		...at this point I can't repeat this error, see
+						// 		ImageGrid.Viewer in nwjs load console output...
+						var graph = []
+						chain.forEach(function(k){ 
+							graph = graph
+								.concat((that[k].depends || [])
+									.filter(function(e){ 
+										return chain.indexOf(e) >= 0 })
+									.map(function(e){ 
+										return `${k}  \t-> ${e}` })) })
+						console.error('Feature cyclic dependency or order conflict:\n\t' 
+							+ graph.join('\n\t'))
+
+						// XXX should we give up completely (break) here 
+						// 		or move on and find new loops???
 						break
 					}
 					chains.push(c)
