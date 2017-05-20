@@ -615,8 +615,10 @@ var FeatureSetProto = {
 										return chain.indexOf(e) >= 0 })
 									.map(function(e){ 
 										return `${k}  \t-> ${e}` })) })
-						console.error('Feature cyclic dependency or order conflict:\n\t' 
-							+ graph.join('\n\t'))
+						console.error([
+								'Feature cyclic dependency or order conflict:',
+							].concat(graph)
+								.join('\n\t'))
 
 						// XXX should we give up completely (break) here 
 						// 		or move on and find new loops???
