@@ -553,6 +553,10 @@ var FeatureSetProto = {
 		// 		complexity is far better...
 		var max = l * l
 
+		var moved = []
+		var chain = []
+		var chains = []
+
 		for(var i=0; i < lst.length; i++){
 			var k = lst[i]
 			var depends = (that[k].depends || []).slice()
@@ -584,8 +588,31 @@ var FeatureSetProto = {
 
 			// move the dependencies after k...
 			// NOTE: this will keep the order within the dependencies...
-			move.length > 0
-				&& lst.splice.apply(lst, [i+1, 0].concat(move))
+			if(move.length > 0){
+				lst.splice.apply(lst, [i+1, 0].concat(move))
+
+				// unseen feature -> new chain...
+				if(moved.indexOf(k) < 0){
+					chain = []
+				}
+
+				moved.push(k)
+
+				// chain completed -> check and store...
+				if(chain.indexOf(k) >= 0){
+					var c = JSON.stringify(chain)
+					// repeating chain -> loop detected...
+					if(chains.indexOf(c) >= 0){
+						console.error('Feature cyclic dependency:', chain)
+						break
+					}
+					chains.push(c)
+
+				// add item to chain...
+				} else {
+					chain.push(k)
+				}
+			}
 
 			// check for cyclic dependencies...
 			// XXX loop signs:
@@ -597,7 +624,7 @@ var FeatureSetProto = {
 			// 		- ...
 			if(lst.length >= max){
 				// XXX get the actual cycle...
-				console.error('Feature cyclic dependency...')
+				console.error('Feature cyclic dependency:', chain)
 				break
 			}
 		}
