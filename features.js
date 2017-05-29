@@ -19,6 +19,35 @@ var args2array = function(a){ return [].slice.call(a) }
 
 
 /*********************************************************************/
+// XXX featuere dependency sorting (C3-variant):
+// 		Requirements:
+//			- feature must be loaded strictly *after* all of it's 
+//				dependencies
+//			- feature depending on an inapplicable feature is also 
+//				inapplicable (recursive up)
+//			- inapplicable features are not loaded (silent)
+//			- missing dependency
+//				-> missing dependency error
+//			- suggested features (and their dependencies) do not produce
+//				dependency errors 
+//				...unless explicitly included in dependency graph
+//			- features with the same exclusive tag are grouped into an 
+//				exclusive set
+//			- only the first feature in an exclusive set is loaded, the 
+//				rest are *excluded*
+//				Q: are excluded features the same as unapplicable???
+//				A: think yes...
+//			- exclusive tag can be used to reference (alias) the loaded 
+//				feature in exclusive set
+//				-> exclusive tag can be used as a dependency
+//			- priority???
+//				in current implementation the priority is used for the 
+//				initial sort (pre-dep.)
+//
+// 	
+//
+//
+/*********************************************************************/
 //
 // Feature attributes:
 // 	.tag			- feature tag (string)
