@@ -43,6 +43,19 @@ var args2array = function(a){ return [].slice.call(a) }
 //			- priority???
 //				in current implementation the priority is used for the 
 //				initial sort (pre-dep.)
+// XXX try doing it in stages:
+// 		- pre-build
+// 			- list all features
+// 			- check applicability
+// 			- mark applicability on dependant features
+// 			- build exclusive sets
+// 		- build:
+// 			- get input features
+// 			- filter out inapplicable
+// 			- build dependency list/tree (C3???)
+// 				- sort nodes by priority
+// 				- expand suggested (applicable-filtered)
+// 				- check missing
 //
 // 	
 //
