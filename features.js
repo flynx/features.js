@@ -43,7 +43,7 @@ var args2array = function(a){ return [].slice.call(a) }
 //			- priority???
 //				in current implementation the priority is used for the 
 //				initial sort (pre-dep.)
-// XXX try doing it in stages:
+// XXX stages:
 // 		- pre-build
 // 			- list all features
 // 			- check applicability
