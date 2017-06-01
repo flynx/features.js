@@ -43,6 +43,9 @@ var args2array = function(a){ return [].slice.call(a) }
 //			- priority???
 //				in current implementation the priority is used for the 
 //				initial sort (pre-dep.)
+//		NOTE: this is different from pure C3 in that we do not require 
+//			order to be maintained within the dependency list of a feature,
+//			at least so far...
 // XXX stages:
 // 		- pre-build
 // 			- list all features
