@@ -715,22 +715,100 @@ var FeatureSetProto = {
 	},
 
 	// XXX 
-	_buildFeatureList: function(lst){
+	_buildFeatureList: function(lst, filter){
 		lst = (lst == null || lst == '*') ? this.features : lst
 		lst = lst.constructor !== Array ? [lst] : lst
 
 		var that = this
 
-		var expand = function(target, lst, store, loops, seen){
-			seen = seen || []
+		// XXX disabled handling is wrong at this point... (???)
+		// 		- if a feature is encountered before it is disabled it
+		// 			will still get loaded...
+		// 		- need to also resolve disable loops...
+		// 			a disable declaration that will disable the declaring feature...
+		var expand = function(target, lst, store, data, _seen){
+			data = data || {}
+			_seen = _seen || []
 
+			// user filter...
+			lst = filter ?
+				lst.filter(function(n){ return filter.call(that, n) })
+				: lst
+
+			// clear disabled...
+			// NOTE: we do as a separate stage to avoid loading a 
+			// 		feature before it is disabled in the same list...
+			lst = data.disabled ?
+				lst
+					.filter(function(n){
+						// feature disabled -> record and skip...
+						if(n[0] == '-'){
+							n = n.slice(1)
+							if(_seen.indexOf(n) >= 0){
+								// NOTE: a disable loop is when a feature tries to disable
+								// 		a feature up in the same chain...
+								// XXX should this break or accumulate???
+								console.warn(`Disable loop detected at "${n}" in chain: ${_seen}`)
+								var loop = _seen.slice(_seen.indexOf(n)).concat([n])
+								data.disable_loops = (data.disable_loops || []).push(loop)
+								return false
+							}
+							// XXX STUB -- need to resolve actual loops and 
+							// 		make the disable global...
+							if(n in store){
+								console.warn('Disabling a feature after it is loaded:', n, _seen)
+							}
+							data.disabled.push(n)
+							return false
+						}
+						// skip already disabled features...
+						if(data.disabled.indexOf(n) >= 0){
+							return false
+						}
+						return true
+					})
+				: lst
+
+			// traverse the tree...
 			lst
+				// normalize the list -- remove non-features and resolve aliases...
+				.map(function(n){ 
+					var f = that[n]
+					// resolve exclusive tags...
+					while(f == null && data.exclusive && n in data.exclusive){
+						var n = data.exclusive[n][0]
+						f = that[n]
+					}
+					// feature not defined or is not a feature...
+					//if(f == null || !(f instanceof Feature)){
+					if(f == null){
+						data.missing 
+							&& data.missing.indexOf(n) < 0
+							&& data.missing.push(n)
+						return false
+					}
+					return n
+				})
+				.filter(function(e){ return e })
+
+				// sort the list...
+				// build the sort table: [ <priority>, <index>, <elem> ]
+				.map(function(e, i){ 
+					return [ that[e].getPriority ? that[e].getPriority() : i, i, e ] })
+				// sort by priority or index...
+				// NOTE: JS compares lists as strings so we have to compare 
+				// 		the list manually...
+				.sort(function(a, b){ return a[0] - b[0] || a[1] - b[1] })
+				// cleanup -- drop the sort table...
+				.map(function(e){ return e[2] })
+
+				// traverse down...
 				.forEach(function(f){
 					// dependency loop detection...
-					if(seen.indexOf(f) >= 0){
-						var loop = seen.slice(seen.indexOf(f)).concat([f])
-						loops 
-							&& loops.push(loop)
+					if(_seen.indexOf(f) >= 0){
+						var loop = _seen.slice(_seen.indexOf(f)).concat([f])
+						data.loops 
+							&& data.loops.push(loop)
 						return
 					}
 
@@ -746,39 +824,58 @@ var FeatureSetProto = {
 						feature[target] 
 						: null
 
+					// traverse down...
 					feature 
 						&& feature[target] 
-						&& expand(target, feature[target] || [], store, loops, seen.concat([f]))
+						&& expand(target, feature[target] || [], store, data, _seen.concat([f]))
+						// XXX makes sense to push the dep here -- at the tail of the recursion...
 				})
 
 			return store
 		}
 
 		var loops = []
+		var disable_loops = []
+		var disabled = []
+		var missing = []
 
 		// build exclusive groups...
 		// XXX use these as aliases...
 		// 		...we need to do this on the build stage to include correct
 		// 		deps and suggesntions...
 		var exclusive = {}
+		var rev_exclusive = {}
 		var _exclusive = {}
 		// NOTE: we do not need loop detection active here...
 		Object.keys(expand('exclusive', lst, _exclusive))
 			.forEach(function(k){
 				(_exclusive[k] || [])
 					.forEach(function(e){
-						exclusive[e] = (exclusive[e] || []).concat([k]) }) })
+						exclusive[e] = (exclusive[e] || []).concat([k]) 
+						//rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) 
+					}) })
 
 		// feature tree...
-		var features = expand('depends', lst, {}, loops)
+		var features = expand('depends', lst, {}, 
+			{
+				loops: loops, 
+				disable_loops: disable_loops, 
+				disabled: disabled, 
+				missing: missing,
+				exclusive: exclusive,
+			})
 
 		// suggestion list...
 		// NOTE: this stage does not track suggested feature dependencies...
 		// NOTE: we do not need loop detection active here...
-		var suggested = Object.keys(expand('suggested', Object.keys(features), {}))
+		var suggested = Object.keys(
+				expand('suggested', Object.keys(features), {}, {disabled: disabled}))
 			.filter(function(f){ return !(f in features) })
 		// get suggestion dependencies...
-		suggested = expand('depends', suggested, {}, loops)
+		suggested = expand('depends', suggested, {},
+			{
+				loops: loops,
+			})
 		// keep only suggested features..
 		// XXX this might get affected by disabled...
 		Object.keys(suggested)
@@ -786,32 +883,11 @@ var FeatureSetProto = {
 				f in features
 			  		&& (delete suggested[f]) })
 
-		// test applicablity -- we can't do this without an object...
-		// XXX
-
 		// check/resolve for exclusivity conflicts...
 		// XXX this might get affected by disabled...
 		// XXX
 		
-		// disabled...
-		// NOTE: this is the last "removal" stage as we only need to obey disable
-		// 		directives of the live features...
-		// XXX need more explicit disable rules and priorities...
-		// 		- disabled are handled top-down the tree only removing 
-		// 			features as they are encountered...
-		// XXX should remove the disabled items when linearising the list... (???)
-		var disabled = Object.keys(features)
-			.concat(Object.keys(suggested))
-				.unique()
-				.filter(function(f){ return f[0] == '-' })
-				.map(function(f){ 
-					// cleanup...
-					delete features[f]
-					delete suggested[f]
-					// normalize feature name...
-					return f.slice(1) })
-
-		/*/ report dependency loops...
+		// report dependency loops...
 		// XXX a loop error should be raised only when one of the loop elements
 		// 		is encountered during the linearisation process...
 		// XXX this might get affected by disabled...
@@ -824,11 +900,14 @@ var FeatureSetProto = {
 
 		// XXX
 		return {
+			list: list,
 			features: features,
 			suggested: suggested,
 			exclusive: exclusive,
 			disabled: disabled,
+			missing: missing,
 			loops: loops,
+			disable_loops: disable_loops,
 		}
 	},
 
