@@ -911,6 +911,219 @@ var FeatureSetProto = {
 		}
 	},
 
+	// C3 implementation...
+	//
+	// NOTE: this is different from the pure C3 in that we do not care 
+	// 		about the dependency order and sort the dependency list...
+	//
+	// Problems:
+	// 	- too picky about candidates -- errors in cases that can be solved by re-ordering...
+	// 	- priority is less significant than level order
+	// 		Ex:
+	// 			ImageGridFeatures._buildFeatureListC3(['ui', 'location'])
+	// 				-> ["location", "introspection", "lifecycle", "workspace", "base", "ui"]
+	// 			ImageGridFeatures._buildFeatureListC3(['location', 'ui'])
+	// 				-> ["introspection", "lifecycle", "workspace", "base", "ui", "location"]
+	_buildFeatureListC3: function(lst, filter){
+		lst = (lst == null || lst == '*') ? this.features : lst
+		lst = lst.constructor !== Array ? [lst] : lst
+
+		var that = this
+
+		var expand = function(lst, data, _seen){
+			_seen = _seen || []
+			data = data || {}
+
+			/*/ user filter...
+			lst = filter ?
+				lst.filter(function(n){ return filter.call(that, n) })
+				: lst
+			//*/
+
+			// disabled filter...
+			// XXX
+
+			lst = lst
+				// normalize the list -- remove non-features and resolve aliases...
+				.map(function(n){ 
+					var f = that[n]
+					// resolve exclusive tags...
+					while(f == null && data.exclusive && n in data.exclusive){
+						var n = data.exclusive[n][0]
+						f = that[n]
+					}
+					// feature not defined or is not a feature...
+					//if(f == null || !(f instanceof Feature)){
+					if(f == null){
+						data.missing 
+							&& data.missing.indexOf(n) < 0
+							&& data.missing.push(n)
+						return false
+					}
+					return n
+				})
+				.filter(function(e){ return e })
+
+				// sort the list...
+				// build the sort table: [ <priority>, <index>, <elem> ]
+				.map(function(e, i){ 
+					return [ that[e].getPriority ? that[e].getPriority() : i, i, e ] })
+				// sort by priority or index -- min -> max
+				// NOTE: this will maintain the order of similar priority actions...
+				// NOTE: JS compares lists as strings so we have to compare 
+				// 		the list manually...
+				.sort(function(a, b){ return a[0] - b[0] || a[1] - b[1] })
+				// cleanup -- drop the sort table...
+				.map(function(e){ return e[2] })
+
+				// traverse...
+				.map(function(e){
+					// detect loops...
+					if(_seen.indexOf(e) >= 0){
+						var loop = _seen.slice(_seen.indexOf(e)).concat([e])
+						console.warn('LOOP:', loop)
+						//data.loops 
+						//	&& data.loops.push(loop)
+						return
+					}
+
+					var L = that[e].depends || []
+
+					// traverse down...
+					//return [e].concat(expand(L.slice(), data, _seen.concat([e])))
+					return L.length > 0 ?
+						[e].concat(expand(L.slice(), data, _seen.concat([e])))
+						: [e]
+				})
+				// XXX for some reason this breaks C3...
+				//.concat([lst])
+			
+			// merge...
+			var res = []
+			var cur = null
+			while(lst.length > 0){
+				cur = lst
+					// get the heads...
+					.map(function(e){ return e && e[0] })
+					// check if the head is in any of the tails...
+					.filter(function(h){
+						return h && lst
+							.filter(function(e){ return e.slice(1).indexOf(h) >= 0 }).length == 0 })
+					.shift()
+
+				// XXX no candidate found...
+				if(cur == null){
+					console.error('no candidate found!!')
+					break
+				}
+
+				// cleanup...
+				lst = lst
+					.map(function(e){ return e && e.filter(function(f){ return f != cur }) })
+					.filter(function(e){ return e && e.length > 0 })
+
+				cur
+					&& res.push(cur)
+				cur = null
+			}
+
+			return res
+		}
+
+		return expand(lst)
+			.reverse()
+	},
+
+	//
+	//	.setup(<actions>, [<feature>, ...])
+	//		-> <actions>
+	//
+	//	.setup([<feature>, ...])
+	//		-> <actions>
+	//
+	setup: function(obj, lst){
+		// if no explicit object is given, just the list...
+		if(lst == null){
+			lst = obj
+			obj = null
+		}
+
+		obj = obj || (this.__actions__ || actions.Actions)()
+
+		lst = lst.constructor !== Array ? [lst] : lst
+		var features = this.buildFeatureList(obj, lst)
+		lst = features.features
+
+		// check for conflicts...
+		if(Object.keys(features.conflicts).length != 0
+				|| Object.keys(features.missing).length != 0){
+			var m = features.missing
+			var c = features.conflicts
+
+			// build a report...
+			var report = []
+
+			// missing deps...
+			Object.keys(m).forEach(function(k){
+				report.push(k + ': requires following missing features:\n'
+					+'          ' + m[k].join(', '))
+			})
+			report.push('\n')
+
+			// conflicts...
+			Object.keys(c).forEach(function(k){
+				report.push(k + ': must setup after:\n          ' + c[k].join(', '))
+			})
+
+			// break...
+			throw 'Feature dependency error:\n    ' + report.join('\n    ') 
+		}
+
+		// report excluded features...
+		if(this.__verbose__ && features.excluded.length > 0){
+			console.warn('Excluded features due to exclusivity conflict:', 
+					features.excluded.join(', '))
+		}
+
+		// report unapplicable features...
+		if(this.__verbose__ && features.unapplicable.length > 0){
+			console.log('Features not applicable in current context:', 
+					features.unapplicable.join(', '))
+		}
+
+		// do the setup...
+		var that = this
+		var setup = FeatureProto.setup
+		lst.forEach(function(n){
+			// setup...
+			if(that[n] != null){
+				this.__verbose__ && console.log('Setting up feature:', n)
+				setup.call(that[n], obj)
+			}
+		})
+
+		// XXX should we extend this if it already was in the object???
+		obj.features = features
+
+		return obj
+	},
+	remove: function(obj, lst){
+		lst = lst.constructor !== Array ? [lst] : lst
+		var that = this
+		lst.forEach(function(n){
+			if(that[n] != null){
+				console.log('Removing feature:', n)
+				that[n].remove(obj)
+			}
+		})
+	},
+
+	// shorthand for: Feature(<feature-set>, ...)
+	// XXX should this return this?
+	Feature: function(){
+		return this.__feature__.apply(null, [this].concat(args2array(arguments)))
+	},
+}
 
 	//
 	//	.setup(<actions>, [<feature>, ...])
