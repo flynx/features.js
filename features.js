@@ -19,51 +19,6 @@ var args2array = function(a){ return [].slice.call(a) }
 
 
 /*********************************************************************/
-// XXX featuere dependency sorting (C3-variant):
-// 		Requirements:
-//			- feature must be loaded strictly *after* all of it's 
-//				dependencies
-//			- feature depending on an inapplicable feature is also 
-//				inapplicable (recursive up)
-//			- inapplicable features are not loaded (silent)
-//			- missing dependency
-//				-> missing dependency error
-//			- suggested features (and their dependencies) do not produce
-//				dependency errors 
-//				...unless explicitly included in dependency graph
-//			- features with the same exclusive tag are grouped into an 
-//				exclusive set
-//			- only the first feature in an exclusive set is loaded, the 
-//				rest are *excluded*
-//				Q: are excluded features the same as unapplicable???
-//				A: think yes...
-//			- exclusive tag can be used to reference (alias) the loaded 
-//				feature in exclusive set
-//				-> exclusive tag can be used as a dependency
-//			- priority???
-//				in current implementation the priority is used for the 
-//				initial sort (pre-dep.)
-//		NOTE: this is different from pure C3 in that we do not require 
-//			order to be maintained within the dependency list of a feature,
-//			at least so far...
-// XXX stages:
-// 		- pre-build
-// 			- list all features
-// 			- check applicability
-// 			- mark applicability on dependant features
-// 			- build exclusive sets
-// 		- build:
-// 			- get input features
-// 			- filter out inapplicable
-// 			- build dependency list/tree (C3???)
-// 				- sort nodes by priority
-// 				- expand suggested (applicable-filtered)
-// 				- check missing
-//
-// 	
-//
-//
-/*********************************************************************/
 //
 // Feature attributes:
 // 	.tag			- feature tag (string)
@@ -660,10 +615,8 @@ var FeatureSetProto = {
 										return chain.indexOf(e) >= 0 })
 									.map(function(e){ 
 										return `${k}  \t-> ${e}` })) })
-						console.error([
-								'Feature cyclic dependency or order conflict:',
-							].concat(graph)
-								.join('\n\t'))
+						console.error('Feature cyclic dependency or order conflict:\n\t' 
+							+ graph.join('\n\t'))
 
 						// XXX should we give up completely (break) here 
 						// 		or move on and find new loops???
@@ -714,7 +667,7 @@ var FeatureSetProto = {
 		}
 	},
 
-	// XXX 
+
 	_buildFeatureList: function(lst, filter){
 		lst = (lst == null || lst == '*') ? this.features : lst
 		lst = lst.constructor !== Array ? [lst] : lst
@@ -818,22 +771,30 @@ var FeatureSetProto = {
 					}
 
 					//var feature = store[f] = that[f]
-					// XXX use exclusive aliases...
 					var feature = that[f]
-					store[f] = feature ? 
-						feature[target] 
-						: null
+					if(feature){
+						var _lst = []
 
-					// traverse down...
-					feature 
-						&& feature[target] 
-						&& expand(target, feature[target] || [], store, data, _seen.concat([f]))
+						// merge lists...
+						;(target instanceof Array ? target : [target])
+							.forEach(function(t){
+								_lst = _lst.concat(feature[t] || [])
+							})
+						store[f] = _lst 
+
+						// traverse down...
+						expand(target, _lst, store, data, _seen.concat([f]))
+
 						// XXX makes sense to push the dep here -- at the tail of the recursion...
+						data.list
+							&& data.list.push(f)
+					}
 				})
 
 			return store
 		}
 
+		//var list = []
 		var loops = []
 		var disable_loops = []
 		var disabled = []
@@ -858,6 +819,7 @@ var FeatureSetProto = {
 		// feature tree...
 		var features = expand('depends', lst, {}, 
 			{
+				//list: list,
 				loops: loops, 
 				disable_loops: disable_loops, 
 				disabled: disabled, 
@@ -874,6 +836,7 @@ var FeatureSetProto = {
 		// get suggestion dependencies...
 		suggested = expand('depends', suggested, {},
 			{
+				//list: list,
 				loops: loops,
 			})
 		// keep only suggested features..
@@ -897,6 +860,17 @@ var FeatureSetProto = {
 				.forEach(function(loop){
 					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
 		//*/
+		
+		// combine the lists...
+		// XXX
+		var list = []
+		expand(['depends', 'suggested'], lst, {}, 
+			{
+				list: list,
+				disabled: disabled, 
+				missing: missing,
+				exclusive: exclusive,
+			})
 
 		// XXX
 		return {
@@ -915,6 +889,8 @@ var FeatureSetProto = {
 	//
 	// NOTE: this is different from the pure C3 in that we do not care 
 	// 		about the dependency order and sort the dependency list...
+	// NOTE: this returns the list in reverse order, i.e. from the input
+	// 		feature and up the dependency list
 	//
 	// Problems:
 	// 	- too picky about candidates -- errors in cases that can be solved by re-ordering...
@@ -1031,99 +1007,251 @@ var FeatureSetProto = {
 		}
 
 		return expand(lst)
-			.reverse()
 	},
 
-	//
-	//	.setup(<actions>, [<feature>, ...])
-	//		-> <actions>
-	//
-	//	.setup([<feature>, ...])
-	//		-> <actions>
-	//
-	setup: function(obj, lst){
-		// if no explicit object is given, just the list...
-		if(lst == null){
-			lst = obj
-			obj = null
-		}
 
-		obj = obj || (this.__actions__ || actions.Actions)()
-
+	// XXX
+	// 		- build tree (a-la ._buildFeatureList(..))
+	// 		- order the features in .depends and .suggested by priority
+	// 		- order the features by dependency (similar to .buildFeatureList(..))
+	// 			each feature in list must be strictly after it's dependencies
+	// 				- for each feature
+	// 					- check if all dependencies are before
+	// 					- if not ??? (XXX)
+	// XXX this looks really promising...
+	_buildFeatureListReorder: function(lst, filter){
+		lst = (lst == null || lst == '*') ? this.features : lst
 		lst = lst.constructor !== Array ? [lst] : lst
-		var features = this.buildFeatureList(obj, lst)
-		lst = features.features
 
-		// check for conflicts...
-		if(Object.keys(features.conflicts).length != 0
-				|| Object.keys(features.missing).length != 0){
-			var m = features.missing
-			var c = features.conflicts
-
-			// build a report...
-			var report = []
-
-			// missing deps...
-			Object.keys(m).forEach(function(k){
-				report.push(k + ': requires following missing features:\n'
-					+'          ' + m[k].join(', '))
-			})
-			report.push('\n')
-
-			// conflicts...
-			Object.keys(c).forEach(function(k){
-				report.push(k + ': must setup after:\n          ' + c[k].join(', '))
-			})
-
-			// break...
-			throw 'Feature dependency error:\n    ' + report.join('\n    ') 
-		}
-
-		// report excluded features...
-		if(this.__verbose__ && features.excluded.length > 0){
-			console.warn('Excluded features due to exclusivity conflict:', 
-					features.excluded.join(', '))
-		}
-
-		// report unapplicable features...
-		if(this.__verbose__ && features.unapplicable.length > 0){
-			console.log('Features not applicable in current context:', 
-					features.unapplicable.join(', '))
-		}
-
-		// do the setup...
 		var that = this
-		var setup = FeatureProto.setup
-		lst.forEach(function(n){
-			// setup...
-			if(that[n] != null){
-				this.__verbose__ && console.log('Setting up feature:', n)
-				setup.call(that[n], obj)
+
+		var expand = function(target, lst, store, data, _seen){
+			data = data || {}
+			_seen = _seen || []
+
+			// user filter...
+			lst = filter ?
+				lst.filter(function(n){ return filter.call(that, n) })
+				: lst
+
+			// clear disabled...
+			// NOTE: we do as a separate stage to avoid loading a 
+			// 		feature before it is disabled in the same list...
+			lst = data.disabled ?
+				lst
+					.filter(function(n){
+						// feature disabled -> record and skip...
+						if(n[0] == '-'){
+							n = n.slice(1)
+							if(_seen.indexOf(n) >= 0){
+								// NOTE: a disable loop is when a feature tries to disable
+								// 		a feature up in the same chain...
+								// XXX should this break or accumulate???
+								console.warn(`Disable loop detected at "${n}" in chain: ${_seen}`)
+								var loop = _seen.slice(_seen.indexOf(n)).concat([n])
+								data.disable_loops = (data.disable_loops || []).push(loop)
+								return false
+							}
+							// XXX STUB -- need to resolve actual loops and 
+							// 		make the disable global...
+							if(n in store){
+								console.warn('Disabling a feature after it is loaded:', n, _seen)
+							}
+							data.disabled.push(n)
+							return false
+						}
+						// skip already disabled features...
+						if(data.disabled.indexOf(n) >= 0){
+							return false
+						}
+						return true
+					})
+				: lst
+
+			// traverse the tree...
+			lst
+				// normalize the list -- remove non-features and resolve aliases...
+				.map(function(n){ 
+					var f = that[n]
+					// resolve exclusive tags...
+					while(f == null && data.exclusive && n in data.exclusive){
+						var n = data.exclusive[n][0]
+						f = that[n]
+					}
+					// feature not defined or is not a feature...
+					if(f == null){
+						data.missing 
+							&& data.missing.indexOf(n) < 0
+							&& data.missing.push(n)
+						return false
+					}
+					return n
+				})
+				.filter(function(e){ return e })
+
+				// traverse down...
+				.forEach(function(f){
+					// dependency loop detection...
+					if(_seen.indexOf(f) >= 0){
+						var loop = _seen.slice(_seen.indexOf(f)).concat([f])
+						data.loops 
+							&& data.loops.push(loop)
+						return
+					}
+
+					// skip already done features...
+					if(f in store){
+						return
+					}
+
+					//var feature = store[f] = that[f]
+					var feature = that[f]
+					if(feature){
+						var _lst = []
+
+						// merge lists...
+						;(target instanceof Array ? target : [target])
+							.forEach(function(t){
+								_lst = _lst.concat(feature[t] || [])
+							})
+						store[f] = _lst 
+
+						// traverse down...
+						expand(target, _lst, store, data, _seen.concat([f]))
+
+						// XXX makes sense to push the dep here -- at the tail of the recursion...
+						data.list
+							&& data.list.push(f)
+					}
+				})
+
+			return store
+		}
+
+		var loops = []
+		var disable_loops = []
+		var disabled = []
+		var missing = []
+
+		// build exclusive groups...
+		// XXX use these as aliases...
+		// 		...we need to do this on the build stage to include correct
+		// 		deps and suggesntions...
+		var exclusive = {}
+		var rev_exclusive = {}
+		var _exclusive = {}
+		// NOTE: we do not need loop detection active here...
+		Object.keys(expand('exclusive', lst, _exclusive))
+			.forEach(function(k){
+				(_exclusive[k] || [])
+					.forEach(function(e){
+						exclusive[e] = (exclusive[e] || []).concat([k]) 
+						//rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) 
+					}) })
+
+		// feature tree...
+		var features = expand('depends', lst, {}, 
+			{
+				loops: loops, 
+				disable_loops: disable_loops, 
+				disabled: disabled, 
+				missing: missing,
+				exclusive: exclusive,
+			})
+
+		// suggestion list...
+		// NOTE: this stage does not track suggested feature dependencies...
+		// NOTE: we do not need loop detection active here...
+		var suggested = Object.keys(
+				expand('suggested', Object.keys(features), {}, {disabled: disabled}))
+			.filter(function(f){ return !(f in features) })
+		// get suggestion dependencies...
+		suggested = expand('depends', suggested, {}, { loops: loops, })
+		// keep only suggested features..
+		// XXX this might get affected by disabled...
+		Object.keys(suggested)
+			.forEach(function(f){ 
+				f in features
+			  		&& (delete suggested[f]) })
+
+		// check/resolve for exclusivity conflicts and aliases...
+		// XXX
+		
+		// report dependency loops...
+		// NOTE: a loop error should be raised only when one of the loop elements
+		// 		is encountered during the linearisation process...
+		// XXX should we report this here???
+		loops.length > 0
+			&& loops
+				.forEach(function(loop){
+					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
+
+		// XXX mix in suggested features...
+		// XXX
+
+		// expand dependency list...
+		// NOTE: this will expand lst in-place...
+		// NOTE: we are not checking for loops here -- mainly because
+		// 		the input is expected to be loop-free...
+		var expanddeps = function(lst, cur, seen){
+			seen = seen || []
+			if(features[cur] == null){
+				return
 			}
-		})
+			// expand the dep list recursively...
+			// NOTE: this will expand features[cur] in-place while 
+			// 		iterating over it...
+			for(var i=0; i < features[cur].length; i++){
+				var f = features[cur][i]
+				if(seen.indexOf(f) < 0){
+					seen.push(f)
 
-		// XXX should we extend this if it already was in the object???
-		obj.features = features
+					expanddeps(features[cur], f, seen)
 
-		return obj
-	},
-	remove: function(obj, lst){
-		lst = lst.constructor !== Array ? [lst] : lst
-		var that = this
-		lst.forEach(function(n){
-			if(that[n] != null){
-				console.log('Removing feature:', n)
-				that[n].remove(obj)
+					features[cur].forEach(function(e){
+						lst.indexOf(e) < 0
+							&& lst.push(e)
+					})
+				}
 			}
-		})
+		}
+
+		// do the actual expansion...
+		var list = Object.keys(features)
+		list.forEach(function(f){ expanddeps(list, f) })
+
+
+		list = list
+			// sort by priority...
+			// format: 
+			// 	[ <feature>, <index>, <priority> ]
+			.map(function(e, i){ 
+				return [e, i, (that[e] && that[e].getPriority) ? that[e].getPriority() : 0 ] })
+			.sort(function(a, b){ 
+				return a[2] - b[2] || a[1] - b[1] })
+
+			// sort by dependency...
+			// format: 
+			// 	[ <feature>, <index> ]
+			.map(function(e, i){ 
+				return [e[0], i] })
+			// NOTE: this can't sort mutually dependant features (loop)...
+			.sort(function(a, b){
+				return (features[a[0]] || []).indexOf(b[0]) >= 0 ? -1
+					: (features[b[0]] || []).indexOf(a[0]) >= 0 ? 1
+					: a[1] - b[1] })
+	
+			// cleanup...
+			.map(function(e){ return e[0] })
+
+
+		return {
+			features: features,
+			list: list,
+			loops: loops,
+		}
 	},
 
-	// shorthand for: Feature(<feature-set>, ...)
-	// XXX should this return this?
-	Feature: function(){
-		return this.__feature__.apply(null, [this].concat(args2array(arguments)))
-	},
-}
 
 	//
 	//	.setup(<actions>, [<feature>, ...])
