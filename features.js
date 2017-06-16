@@ -733,7 +733,6 @@ var FeatureSetProto = {
 						f = that[n]
 					}
 					// feature not defined or is not a feature...
-					//if(f == null || !(f instanceof Feature)){
 					if(f == null){
 						data.missing 
 							&& data.missing.indexOf(n) < 0
@@ -929,7 +928,6 @@ var FeatureSetProto = {
 						f = that[n]
 					}
 					// feature not defined or is not a feature...
-					//if(f == null || !(f instanceof Feature)){
 					if(f == null){
 						data.missing 
 							&& data.missing.indexOf(n) < 0
@@ -1340,13 +1338,13 @@ var FeatureSetProto = {
 	// shorthand for: Feature(<feature-set>, ...)
 	// XXX should this return this?
 	Feature: function(){
-		return this.__feature__.apply(null, [this].concat(args2array(arguments)))
-	},
+		return this.__feature__.apply(null, [this].concat(args2array(arguments))) },
 }
 
 
 var FeatureSet =
 module.FeatureSet = object.makeConstructor('FeatureSet', FeatureSetProto)
+
 
 
 //---------------------------------------------------------------------
