@@ -1008,6 +1008,7 @@ var FeatureSetProto = {
 	},
 
 
+	// XXX this looks really promising...
 	// XXX
 	// 		- build tree (a-la ._buildFeatureList(..))
 	// 		- order the features in .depends and .suggested by priority
@@ -1016,9 +1017,11 @@ var FeatureSetProto = {
 	// 				- for each feature
 	// 					- check if all dependencies are before
 	// 					- if not ??? (XXX)
-	// XXX this looks really promising...
+	// XXX TODO:
+	// 		- resolve exclusive aliases and conflicts...
 	_buildFeatureListReorder: function(lst, filter){
-		lst = (lst == null || lst == '*') ? this.features : lst
+		var all = this.features
+		lst = (lst == null || lst == '*') ? all : lst
 		lst = lst.constructor !== Array ? [lst] : lst
 
 		var that = this
@@ -1032,6 +1035,7 @@ var FeatureSetProto = {
 			// 		feature before it is disabled in the same list...
 			lst = data.disabled ?
 				lst
+					// XXX also skip features depending on disabled...
 					.filter(function(n){
 						// feature disabled -> record and skip...
 						if(n[0] == '-'){
@@ -1129,7 +1133,7 @@ var FeatureSetProto = {
 		// user filter...
 		// NOTE: we build this out of the full feature list...
 		var filtered_out = filter ?
-			this.features.filter(function(n){ return !filter.call(that, n) })
+			all.filter(function(n){ return !filter.call(that, n) })
 			: [] 
 		disabled = disabled.concat(filtered_out)
 
@@ -1138,16 +1142,13 @@ var FeatureSetProto = {
 		// 		...we need to do this on the build stage to include correct
 		// 		deps and suggesntions...
 		var exclusive = {}
-		var rev_exclusive = {}
 		var _exclusive = {}
 		// NOTE: we do not need loop detection active here...
-		Object.keys(expand('exclusive', lst, _exclusive))
+		Object.keys(expand('exclusive', all, _exclusive))
 			.forEach(function(k){
 				(_exclusive[k] || [])
 					.forEach(function(e){
-						exclusive[e] = (exclusive[e] || []).concat([k]) 
-						//rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) 
-					}) })
+						exclusive[e] = (exclusive[e] || []).concat([k]) }) })
 
 		// feature tree...
 		var features = expand('depends', lst, {}, 
@@ -1163,10 +1164,14 @@ var FeatureSetProto = {
 		// NOTE: this stage does not track suggested feature dependencies...
 		// NOTE: we do not need loop detection active here...
 		var suggested = Object.keys(
-				expand('suggested', Object.keys(features), {}, {disabled: disabled}))
+				expand('suggested', Object.keys(features), {}, { disabled: disabled }))
 			.filter(function(f){ return !(f in features) })
 		// get suggestion dependencies...
-		suggested = expand('depends', suggested, {}, { loops: loops, })
+		suggested = expand('depends', suggested, {}, 
+			{ 
+				loops: loops, 
+				disabled: disabled, 
+			})
 		// keep only suggested features..
 		// XXX this might get affected by disabled...
 		Object.keys(suggested)
@@ -1174,20 +1179,67 @@ var FeatureSetProto = {
 				f in features
 			  		&& (delete suggested[f]) })
 
-		// check/resolve for exclusivity conflicts and aliases...
-		// XXX
-		
 		// report dependency loops...
 		// NOTE: a loop error should be raised only when one of the loop elements
 		// 		is encountered during the linearisation process...
 		// XXX should we report this here???
+		// XXX should looping features get disabled or be loaded in random-ish order???
+		// 		...#2 case will need to be handled at the sorting stage...
 		loops.length > 0
 			&& loops
 				.forEach(function(loop){
 					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
 
-		// XXX mix in suggested features...
+		// mix in suggested features...
+		Object.keys(suggested)
+			.forEach(function(f){ features[f] = suggested[f] })
+		
+		// check/resolve for exclusivity conflicts and aliases...
 		// XXX
+
+
+		// who pulled who in...
+		var rev_features = {}
+		Object.keys(features)
+			.forEach(function(f){
+				(features[f] || [])
+					.forEach(function(d){ 
+						rev_features[d] = (rev_features[d] || []).concat([f]) }) })
+		
+		// clear dependency trees containing disabled features...
+		do {
+			var expanded_disabled = false
+			disabled
+				.forEach(function(d){ 
+					// disable all features that depend on a disabled feature...
+					Object.keys(features)
+						.forEach(function(f){ 
+							if(features[f]
+									&& features[f].indexOf(d) >= 0
+									&& disabled.indexOf(f) < 0){
+								expanded_disabled = true
+								disabled.push(f)
+							}
+						})
+					// delete the feature itself...
+					delete features[d] 
+				})
+		} while(expanded_disabled)
+		// remove orphaned features...
+		// ...an orphan is a feature included by a disabled feature...
+		// NOTE: this should take care of missing features too...
+		Object.keys(rev_features)
+			.filter(function(f){
+				return rev_features[f]
+					// keep non-disabled and existing sources only...
+					.filter(function(e){ 
+						return !(e in features) || disabled.indexOf(e) < 0 })
+					// keep features that have no sources left, i.e. orphans...
+					.length == 0 })
+			.forEach(function(f){
+				disabled.push(f)
+				delete features[f]
+			})
 
 		// expand dependency list...
 		// NOTE: this will expand lst in-place...
@@ -1215,11 +1267,9 @@ var FeatureSetProto = {
 				}
 			}
 		}
-
 		// do the actual expansion...
 		var list = Object.keys(features)
 		list.forEach(function(f){ expanddeps(list, f) })
-
 
 		// sort by priority...
 		list = list
@@ -1238,8 +1288,8 @@ var FeatureSetProto = {
 		// NOTE: this requires the list to be ordered from high to low 
 		// 		priority, i.e. the same order they should be loaded in...
 		// XXX dependency loops will throw this into and infinite loop...
-		// XXX need a better loop detection....
-		var loops = list.length
+		// XXX need a better loop detection strategy...
+		var loop_limit = list.length
 		do {
 			var moves = 0
 			list
@@ -1263,16 +1313,21 @@ var FeatureSetProto = {
 						moves++
 					}
 				})
-			loops--
-		} while(moves > 0 && loops > 0)
+			loop_limit--
+		} while(moves > 0 && loop_limit > 0)
 
 		// sanity check...
-		loops <= 0
+		loop_limit <= 0
 			&& console.error('Hit loop limit while sorting dependencies!')
 
 		return {
-			features: features,
 			list: list,
+
+			suggested: Object.keys(suggested),
+			features: features,
+			rev_features: rev_features,
+			exclusive: exclusive,
+			missing: missing,
 			loops: loops,
 			filtered_out: filtered_out,
 			disabled: disabled,
