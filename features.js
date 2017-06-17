@@ -1027,11 +1027,6 @@ var FeatureSetProto = {
 			data = data || {}
 			_seen = _seen || []
 
-			// user filter...
-			lst = filter ?
-				lst.filter(function(n){ return filter.call(that, n) })
-				: lst
-
 			// clear disabled...
 			// NOTE: we do as a separate stage to avoid loading a 
 			// 		feature before it is disabled in the same list...
@@ -1131,6 +1126,13 @@ var FeatureSetProto = {
 		var disabled = []
 		var missing = []
 
+		// user filter...
+		// NOTE: we build this out of the full feature list...
+		var filtered_out = filter ?
+			this.features.filter(function(n){ return !filter.call(that, n) })
+			: [] 
+		disabled = disabled.concat(filtered_out)
+
 		// build exclusive groups...
 		// XXX use these as aliases...
 		// 		...we need to do this on the build stage to include correct
@@ -1219,34 +1221,61 @@ var FeatureSetProto = {
 		list.forEach(function(f){ expanddeps(list, f) })
 
 
+		// sort by priority...
 		list = list
-			// sort by priority...
 			// format: 
 			// 	[ <feature>, <index>, <priority> ]
 			.map(function(e, i){ 
 				return [e, i, (that[e] && that[e].getPriority) ? that[e].getPriority() : 0 ] })
 			.sort(function(a, b){ 
 				return a[2] - b[2] || a[1] - b[1] })
-
-			// sort by dependency...
-			// format: 
-			// 	[ <feature>, <index> ]
-			.map(function(e, i){ 
-				return [e[0], i] })
-			// NOTE: this can't sort mutually dependant features (loop)...
-			.sort(function(a, b){
-				return (features[a[0]] || []).indexOf(b[0]) >= 0 ? -1
-					: (features[b[0]] || []).indexOf(a[0]) >= 0 ? 1
-					: a[1] - b[1] })
-	
 			// cleanup...
 			.map(function(e){ return e[0] })
+			// sort by the order features should be loaded...
+			.reverse()
 
+		// sort by dependency...
+		// NOTE: this requires the list to be ordered from high to low 
+		// 		priority, i.e. the same order they should be loaded in...
+		// XXX dependency loops will throw this into and infinite loop...
+		// XXX need a better loop detection....
+		var loops = list.length
+		do {
+			var moves = 0
+			list
+				.slice()
+				.forEach(function(e){
+					var deps = features[e]
+					if(!deps){
+						return
+					}
+					var from = list.indexOf(e)
+					var to = list
+						.map(function(f, i){ return [f, i] })
+						.slice(from+1)
+						// keep only dependencies...
+						.filter(function(f){ return deps.indexOf(f[0]) >= 0 })
+						.pop()
+					if(to){
+						// place after last dependency...
+						list.splice(to[1]+1, 0, e)
+						list.splice(from, 1)
+						moves++
+					}
+				})
+			loops--
+		} while(moves > 0 && loops > 0)
+
+		// sanity check...
+		loops <= 0
+			&& console.error('Hit loop limit while sorting dependencies!')
 
 		return {
 			features: features,
 			list: list,
 			loops: loops,
+			filtered_out: filtered_out,
+			disabled: disabled,
 		}
 	},
 
