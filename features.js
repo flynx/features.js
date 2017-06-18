@@ -1017,6 +1017,7 @@ var FeatureSetProto = {
 	// 				- for each feature
 	// 					- check if all dependencies are before
 	// 					- if not ??? (XXX)
+	// XXX should we report stuff here???
 	// XXX TODO:
 	// 		- resolve exclusive aliases and conflicts...
 	_buildFeatureListReorder: function(lst, filter){
@@ -1161,6 +1162,10 @@ var FeatureSetProto = {
 			})
 
 		// suggestion list...
+		//	...this will be used to check if we need to break on missing 
+		//	features, e.g. if a feature is suggested we can silently skip 
+		//	it otherwise err...
+		//
 		// NOTE: this stage does not track suggested feature dependencies...
 		// NOTE: we do not need loop detection active here...
 		var suggested = Object.keys(
@@ -1172,33 +1177,26 @@ var FeatureSetProto = {
 				loops: loops, 
 				disabled: disabled, 
 			})
-		// keep only suggested features..
-		// XXX this might get affected by disabled...
 		Object.keys(suggested)
 			.forEach(function(f){ 
-				f in features
-			  		&& (delete suggested[f]) })
+				// keep only suggested features -- diff with features...
+				if(f in features){
+			  		delete suggested[f]
 
-		// report dependency loops...
-		// NOTE: a loop error should be raised only when one of the loop elements
-		// 		is encountered during the linearisation process...
-		// XXX should we report this here???
-		// XXX should looping features get disabled or be loaded in random-ish order???
-		// 		...#2 case will need to be handled at the sorting stage...
-		loops.length > 0
-			&& loops
-				.forEach(function(loop){
-					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
+				// mix suggested into features...
+				} else {
+					features[f] = suggested[f]
+				}
+			})
 
-		// mix in suggested features...
-		Object.keys(suggested)
-			.forEach(function(f){ features[f] = suggested[f] })
-		
+
 		// check/resolve for exclusivity conflicts and aliases...
 		// XXX
 
 
-		// who pulled who in...
+		// reverse dependencies -- who pulled who in... (index)
+		// 	...this is used to clear out orphaned features later and for
+		// 	introspection...
 		var rev_features = {}
 		Object.keys(features)
 			.forEach(function(f){
@@ -1225,6 +1223,7 @@ var FeatureSetProto = {
 					delete features[d] 
 				})
 		} while(expanded_disabled)
+
 		// remove orphaned features...
 		// ...an orphan is a feature included by a disabled feature...
 		// NOTE: this should take care of missing features too...
@@ -1241,7 +1240,9 @@ var FeatureSetProto = {
 				delete features[f]
 			})
 
-		// expand dependency list...
+		// expand dependency list... (index)
+		// 	...this is used for feature sorting by dependency...
+		//
 		// NOTE: this will expand lst in-place...
 		// NOTE: we are not checking for loops here -- mainly because
 		// 		the input is expected to be loop-free...
@@ -1285,8 +1286,10 @@ var FeatureSetProto = {
 			.reverse()
 
 		// sort by dependency...
+		//
 		// NOTE: this requires the list to be ordered from high to low 
 		// 		priority, i.e. the same order they should be loaded in...
+		//
 		// XXX dependency loops will throw this into and infinite loop...
 		// XXX need a better loop detection strategy...
 		var loop_limit = list.length
@@ -1316,9 +1319,22 @@ var FeatureSetProto = {
 			loop_limit--
 		} while(moves > 0 && loop_limit > 0)
 
-		// sanity check...
+
+		// XXX should we report stuff here???
+		// report dependency loops...
+		//
+		// NOTE: a loop error should be raised only when one of the loop elements
+		// 		is encountered during the linearisation process...
+		// XXX should looping features get disabled or be loaded in random-ish order???
+		// 		...#2 case will need to be handled at the sorting stage...
+		loops.length > 0
+			&& loops
+				.forEach(function(loop){
+					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
+		// report loop limit...
 		loop_limit <= 0
 			&& console.error('Hit loop limit while sorting dependencies!')
+
 
 		return {
 			list: list,
