@@ -1143,11 +1143,10 @@ var FeatureSetProto = {
 		// 		...we need to do this on the build stage to include correct
 		// 		deps and suggesntions...
 		var exclusive = {}
-		var _exclusive = {}
-		// NOTE: we do not need loop detection active here...
-		Object.keys(expand('exclusive', all, _exclusive))
+		all
+			.filter(function(f){ return !!that[f].exclusive })
 			.forEach(function(k){
-				(_exclusive[k] || [])
+				(that[k].exclusive || [])
 					.forEach(function(e){
 						exclusive[e] = (exclusive[e] || []).concat([k]) }) })
 
@@ -1289,8 +1288,8 @@ var FeatureSetProto = {
 		//
 		// NOTE: this requires the list to be ordered from high to low 
 		// 		priority, i.e. the same order they should be loaded in...
+		// NOTE: dependency loops will throw this into and "infinite" loop...
 		//
-		// XXX dependency loops will throw this into and infinite loop...
 		// XXX need a better loop detection strategy...
 		var loop_limit = list.length
 		do {
