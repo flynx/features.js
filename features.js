@@ -1019,7 +1019,7 @@ var FeatureSetProto = {
 	// 					- if not ??? (XXX)
 	// XXX should we report stuff here???
 	// XXX TODO:
-	// 		- resolve exclusive aliases and conflicts...
+	// 		- wrapper to pass in applicability filter...
 	_buildFeatureListReorder: function(lst, filter){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
@@ -1071,10 +1071,10 @@ var FeatureSetProto = {
 				// normalize the list -- remove non-features and resolve aliases...
 				.map(function(n){ 
 					var f = that[n]
-					// resolve exclusive tags...
-					while(f == null && data.exclusive && n in data.exclusive){
-						var n = data.exclusive[n][0]
-						f = that[n]
+					// exclusive tags...
+					if(f == null && data.exclusive && n in data.exclusive){
+						store[n] = null
+						return false
 					}
 					// feature not defined or is not a feature...
 					if(f == null){
@@ -1116,10 +1116,6 @@ var FeatureSetProto = {
 
 						// traverse down...
 						expand(target, _lst, store, data, _seen.concat([f]))
-
-						// XXX makes sense to push the dep here -- at the tail of the recursion...
-						data.list
-							&& data.list.push(f)
 					}
 				})
 
@@ -1143,57 +1139,121 @@ var FeatureSetProto = {
 		// 		...we need to do this on the build stage to include correct
 		// 		deps and suggesntions...
 		var exclusive = {}
+		var rev_exclusive = {}
 		all
 			.filter(function(f){ return !!that[f].exclusive })
 			.forEach(function(k){
 				(that[k].exclusive || [])
 					.forEach(function(e){
-						exclusive[e] = (exclusive[e] || []).concat([k]) }) })
+						exclusive[e] = (exclusive[e] || []).concat([k]) 
+						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
 
-		// feature tree...
-		var features = expand('depends', lst, {}, 
-			{
+		// XXX revise:
+		// 		- should this be this depending on closure so much???
+		var expandFeatures = function(lst, features){
+			features = features || {}
+
+			// feature tree...
+			var expand_data = {
 				loops: loops, 
-				disable_loops: disable_loops, 
 				disabled: disabled, 
+				disable_loops: disable_loops, 
 				missing: missing,
 				exclusive: exclusive,
-			})
+			}
 
-		// suggestion list...
-		//	...this will be used to check if we need to break on missing 
-		//	features, e.g. if a feature is suggested we can silently skip 
-		//	it otherwise err...
-		//
-		// NOTE: this stage does not track suggested feature dependencies...
-		// NOTE: we do not need loop detection active here...
-		var suggested = Object.keys(
-				expand('suggested', Object.keys(features), {}, { disabled: disabled }))
-			.filter(function(f){ return !(f in features) })
-		// get suggestion dependencies...
-		suggested = expand('depends', suggested, {}, 
-			{ 
-				loops: loops, 
-				disabled: disabled, 
-			})
-		Object.keys(suggested)
-			.forEach(function(f){ 
-				// keep only suggested features -- diff with features...
-				if(f in features){
-			  		delete suggested[f]
+			features = expand('depends', lst, features, expand_data)
 
-				// mix suggested into features...
-				} else {
-					features[f] = suggested[f]
+			// suggestion list...
+			//	...this will be used to check if we need to break on missing 
+			//	features, e.g. if a feature is suggested we can silently skip 
+			//	it otherwise err...
+			//
+			// NOTE: this stage does not track suggested feature dependencies...
+			// NOTE: we do not need loop detection active here...
+			var s = Object.keys(
+					expand('suggested', Object.keys(features), {}, { disabled: disabled }))
+				.filter(function(f){ return !(f in features) })
+			// get suggestion dependencies...
+			// NOTE: we do not care bout missing here...
+			s = expand('depends', s, {}, 
+				{ 
+					loops: loops, 
+					disabled: disabled, 
+					disable_loops: disable_loops, 
+					exclusive: exclusive,
+				})
+			Object.keys(s)
+				.forEach(function(f){ 
+					// keep only suggested features -- diff with features...
+					if(f in features){
+						delete s[f]
+
+					// mix suggested into features...
+					} else {
+						features[f] = s[f]
+					}
+				})
+		}
+
+
+		var features = {}
+		expandFeatures(lst, features)
+
+
+		// check for exclusivity conflicts and aliases...
+		var conflicts = {}
+		Object.keys(features)
+			.forEach(function(f){
+				// alias...
+				while(f in exclusive){
+					var candidates = (exclusive[f] || [])
+						.filter(function(c){ return c in features })
+
+					// resolve alias to non-included feature...
+					if(candidates.length == 0){
+						var target = exclusive[f][0]
+
+						// expand target...
+						expandFeatures([target], features)
+
+					// link alias to existing feature...
+					} else {
+						var target = candidates[0]
+					}
+
+					// remove the alias...
+					delete features[f]
+					// replace dependencies...
+					Object.keys(features)
+						.forEach(function(e){
+							var i = features[e].indexOf(f)
+							i >= 0
+								&& features[e].splice(i, 1, target)
+						})
+					f = target
+				}
+				
+				// exclusive feature...
+				if(f in rev_exclusive){
+					// XXX handle multiple groups... (???)
+					var group = rev_exclusive[f]
+					var candidates = (exclusive[group] || [])
+						.filter(function(c){ return c in features })
+
+					if(!(group in conflicts) && candidates.length > 1){
+						conflicts[group] = candidates
+					}
 				}
 			})
+		// resolve any conflicts found...
+		Object.keys(conflicts)
+			.forEach(function(group){
+				// XXX is this how we decide which feature to keep???
+				disabled = disabled.concat(conflicts[group].slice(1))})
 
 
-		// check/resolve for exclusivity conflicts and aliases...
-		// XXX
-
-
-		// reverse dependencies -- who pulled who in... (index)
+		// reverse dependency index...
 		// 	...this is used to clear out orphaned features later and for
 		// 	introspection...
 		var rev_features = {}
@@ -1289,11 +1349,12 @@ var FeatureSetProto = {
 		// NOTE: this requires the list to be ordered from high to low 
 		// 		priority, i.e. the same order they should be loaded in...
 		// NOTE: dependency loops will throw this into and "infinite" loop...
-		//
-		// XXX need a better loop detection strategy...
-		var loop_limit = list.length
+		var loop_limit = list.length + 1
 		do {
 			var moves = 0
+			if(list.length == 0){
+				break
+			}
 			list
 				.slice()
 				.forEach(function(e){
@@ -1333,15 +1394,19 @@ var FeatureSetProto = {
 		// report loop limit...
 		loop_limit <= 0
 			&& console.error('Hit loop limit while sorting dependencies!')
+		// report conflicts...
+		Object.keys(conflicts)
+			.forEach(function(group){
+				console.error('Exclusive "'+ group +'" conflict at:', conflicts[group]) })
 
 
 		return {
 			list: list,
 
-			suggested: Object.keys(suggested),
 			features: features,
 			rev_features: rev_features,
 			exclusive: exclusive,
+			conflicts: conflicts,
 			missing: missing,
 			loops: loops,
 			filtered_out: filtered_out,
