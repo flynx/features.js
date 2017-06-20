@@ -1008,18 +1008,18 @@ var FeatureSetProto = {
 	},
 
 
-	// XXX this looks really promising...
-	// XXX
-	// 		- build tree (a-la ._buildFeatureList(..))
-	// 		- order the features in .depends and .suggested by priority
-	// 		- order the features by dependency (similar to .buildFeatureList(..))
-	// 			each feature in list must be strictly after it's dependencies
-	// 				- for each feature
-	// 					- check if all dependencies are before
-	// 					- if not ??? (XXX)
-	// XXX should we report stuff here???
-	// XXX TODO:
-	// 		- wrapper to pass in applicability filter...
+	// Build list of features in an appropriate order to load...
+	//
+	// Algorithm:
+	// 	- expand features:
+	// 		- handle dependencies (detect loops)
+	// 		- handle suggestions
+	// 		- handle explicitly disabled features (detect loops)
+	// 		- handle exclusive feature groups/aliases (handle conflicts)
+	// 	- sort list of features:
+	// 		- by priority
+	// 		- by dependency (detect loops/errors)
+	//
 	_buildFeatureListReorder: function(lst, filter){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
@@ -1027,6 +1027,10 @@ var FeatureSetProto = {
 
 		var that = this
 
+		// Expand feature references (recursive)...
+		//
+		// NOTE: closures are not used here as we need to pass different
+		// 		stuff into data in different situations...
 		var expand = function(target, lst, store, data, _seen){
 			data = data || {}
 			_seen = _seen || []
@@ -1036,7 +1040,6 @@ var FeatureSetProto = {
 			// 		feature before it is disabled in the same list...
 			lst = data.disabled ?
 				lst
-					// XXX also skip features depending on disabled...
 					.filter(function(n){
 						// feature disabled -> record and skip...
 						if(n[0] == '-'){
@@ -1122,34 +1125,22 @@ var FeatureSetProto = {
 			return store
 		}
 
-		var loops = []
-		var disable_loops = []
-		var disabled = []
-		var missing = []
-
-		// user filter...
-		// NOTE: we build this out of the full feature list...
-		var filtered_out = filter ?
-			all.filter(function(n){ return !filter.call(that, n) })
-			: [] 
-		disabled = disabled.concat(filtered_out)
-
-		// build exclusive groups...
-		// XXX use these as aliases...
-		// 		...we need to do this on the build stage to include correct
-		// 		deps and suggesntions...
-		var exclusive = {}
-		var rev_exclusive = {}
-		all
-			.filter(function(f){ return !!that[f].exclusive })
-			.forEach(function(k){
-				(that[k].exclusive || [])
-					.forEach(function(e){
-						exclusive[e] = (exclusive[e] || []).concat([k]) 
-						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
-
-		// XXX revise:
-		// 		- should this be this depending on closure so much???
+		// Expand feature dependencies and suggestions recursively...
+		//
+		// NOTE: this relies on the following values being in the closure:
+		// 		loops			- list of loop chains found
+		// 		disable_loops	- disable loops
+		// 							when a feature containing a disable 
+		// 							directive gets disabled as a result
+		// 		disabled		- list of disabled features
+		// 		missing			- list of missing features
+		// 		exclusive		- exclusive feature index
+		// NOTE: the above containers will get updated as a side-effect.
+		// NOTE: all of the above values are defined near the location 
+		// 		they are first used/initiated...
+		// NOTE: closures are used here purely for simplicity and conciseness
+		// 		as threading data would not add any flexibility but make 
+		// 		the code more complex...
 		var expandFeatures = function(lst, features){
 			features = features || {}
 
@@ -1194,14 +1185,44 @@ var FeatureSetProto = {
 						features[f] = s[f]
 					}
 				})
+
+			return features
 		}
 
 
-		var features = {}
-		expandFeatures(lst, features)
+		//--------------------- Globals: filtering / exclusive tags ---
+
+		var loops = []
+		var disable_loops = []
+		var disabled = []
+		var missing = []
+
+		// user filter...
+		// NOTE: we build this out of the full feature list...
+		var filtered_out = filter ?
+			all.filter(function(n){ return !filter.call(that, n) })
+			: [] 
+		disabled = disabled.concat(filtered_out)
+
+		// build exclusive groups...
+		var exclusive = {}
+		var rev_exclusive = {}
+		all
+			.filter(function(f){ return !!that[f].exclusive })
+			.forEach(function(k){
+				(that[k].exclusive || [])
+					.forEach(function(e){
+						exclusive[e] = (exclusive[e] || []).concat([k]) 
+						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
 
 
-		// check for exclusivity conflicts and aliases...
+		//-------------------------------- Stage 1: expand features ---
+		var features = expandFeatures(lst)
+
+
+		//-------------------------------- Exclusive groups/aliases ---
+		// Handle exclusive feature groups and aliases...
+		//
 		var conflicts = {}
 		Object.keys(features)
 			.forEach(function(f){
@@ -1214,7 +1235,7 @@ var FeatureSetProto = {
 					if(candidates.length == 0){
 						var target = exclusive[f][0]
 
-						// expand target...
+						// expand target to features...
 						expandFeatures([target], features)
 
 					// link alias to existing feature...
@@ -1246,12 +1267,17 @@ var FeatureSetProto = {
 					}
 				}
 			})
-		// resolve any conflicts found...
+		// resolve any exclusivity conflicts found...
+		var excluded = []
 		Object.keys(conflicts)
 			.forEach(function(group){
 				// XXX is this how we decide which feature to keep???
-				disabled = disabled.concat(conflicts[group].slice(1))})
+				excluded = excluded.concat(conflicts[group].slice(1))})
+		disabled = disabled.concat(excluded)
 
+
+		//--------------------------------------- Disabled features ---
+		// Handle disabled features and cleanup...
 
 		// reverse dependency index...
 		// 	...this is used to clear out orphaned features later and for
@@ -1262,7 +1288,7 @@ var FeatureSetProto = {
 				(features[f] || [])
 					.forEach(function(d){ 
 						rev_features[d] = (rev_features[d] || []).concat([f]) }) })
-		
+
 		// clear dependency trees containing disabled features...
 		do {
 			var expanded_disabled = false
@@ -1299,8 +1325,10 @@ var FeatureSetProto = {
 				delete features[f]
 			})
 
-		// expand dependency list... (index)
-		// 	...this is used for feature sorting by dependency...
+
+		//---------------------------------- Stage 2: sort features ---
+
+		// Prepare for sort: expand dependency list in features... 
 		//
 		// NOTE: this will expand lst in-place...
 		// NOTE: we are not checking for loops here -- mainly because
@@ -1331,7 +1359,12 @@ var FeatureSetProto = {
 		var list = Object.keys(features)
 		list.forEach(function(f){ expanddeps(list, f) })
 
+
 		// sort by priority...
+		//
+		// NOTE: this will attempt to only move features with explicitly 
+		// 		defined priorities and keep the rest in the same order 
+		// 		when possible...
 		list = list
 			// format: 
 			// 	[ <feature>, <index>, <priority> ]
@@ -1380,6 +1413,8 @@ var FeatureSetProto = {
 		} while(moves > 0 && loop_limit > 0)
 
 
+		//-------------------------------------------------------------
+
 		// XXX should we report stuff here???
 		// report dependency loops...
 		//
@@ -1391,26 +1426,34 @@ var FeatureSetProto = {
 			&& loops
 				.forEach(function(loop){
 					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
-		// report loop limit...
-		loop_limit <= 0
-			&& console.error('Hit loop limit while sorting dependencies!')
 		// report conflicts...
 		Object.keys(conflicts)
 			.forEach(function(group){
 				console.error('Exclusive "'+ group +'" conflict at:', conflicts[group]) })
+		// report loop limit...
+		// XXX store this to data...
+		loop_limit <= 0
+			&& console.error('Hit loop limit while sorting dependencies!')
 
 
 		return {
+			input: lst,
+
 			list: list,
 
-			features: features,
-			rev_features: rev_features,
-			exclusive: exclusive,
-			conflicts: conflicts,
+			disabled: disabled,
+			excluded: excluded,
+			filtered_out: filtered_out,
+
+			// XXX should these be in a error block???
 			missing: missing,
 			loops: loops,
-			filtered_out: filtered_out,
-			disabled: disabled,
+			conflicts: conflicts,
+			sort_loop_error: loop_limit <= 0,
+
+			//features: features,
+			//rev_features: rev_features,
+			//exclusive: exclusive,
 		}
 	},
 
