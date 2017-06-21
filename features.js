@@ -1457,6 +1457,83 @@ var FeatureSetProto = {
 		}
 	},
 
+	_setup: function(obj, lst){
+		// if no explicit object is given, just the list...
+		if(lst == null){
+			lst = obj
+			obj = null
+		}
+
+		obj = obj || (this.__actions__ || actions.Actions)()
+
+		lst = lst.constructor !== Array ? [lst] : lst
+		var features = this._buildFeatureListReorder(lst, 
+			function(f){
+				var f = this[n]
+				// check applicability...
+				if(f.isApplicable && !f.isApplicable.call(this, obj)){
+					//unapplicable.push(n)
+					return false
+				}
+				return true
+			}) 
+		lst = features.list
+
+		// check for conflicts...
+		/*/ XXX need to update this section...
+		if(Object.keys(features.conflicts).length != 0
+				|| Object.keys(features.missing).length != 0){
+			var m = features.missing
+			var c = features.conflicts
+
+			// build a report...
+			var report = []
+
+			// missing deps...
+			Object.keys(m).forEach(function(k){
+				report.push(k + ': requires following missing features:\n'
+					+'          ' + m[k].join(', '))
+			})
+			report.push('\n')
+
+			// conflicts...
+			Object.keys(c).forEach(function(k){
+				report.push(k + ': must setup after:\n          ' + c[k].join(', '))
+			})
+
+			// break...
+			throw 'Feature dependency error:\n    ' + report.join('\n    ') 
+		}
+
+		// report excluded features...
+		if(this.__verbose__ && features.excluded.length > 0){
+			console.warn('Excluded features due to exclusivity conflict:', 
+					features.excluded.join(', '))
+		}
+
+		// report unapplicable features...
+		if(this.__verbose__ && features.unapplicable.length > 0){
+			console.log('Features not applicable in current context:', 
+					features.unapplicable.join(', '))
+		}
+		//*/
+
+		// do the setup...
+		var that = this
+		var setup = FeatureProto.setup
+		lst.forEach(function(n){
+			// setup...
+			if(that[n] != null){
+				this.__verbose__ && console.log('Setting up feature:', n)
+				setup.call(that[n], obj)
+			}
+		})
+
+		// XXX should we extend this if it already was in the object???
+		obj.features = features
+
+		return obj
+	},
 
 	//
 	//	.setup(<actions>, [<feature>, ...])
