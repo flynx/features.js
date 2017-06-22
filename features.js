@@ -679,7 +679,11 @@ var FeatureSetProto = {
 	// 		- by priority
 	// 		- by dependency (detect loops/errors)
 	//
-	_buildFeatureListReorder: function(lst, filter){
+	// XXX differences to .buildFeatureList(..):
+	// 		- order is slightly different -- within expectations...
+	// 		- this includes meta-features...
+	// 			this seems to be more logical and more flexible...
+	_buildFeatureList: function(lst, filter){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
 		lst = lst.constructor !== Array ? [lst] : lst
@@ -822,7 +826,10 @@ var FeatureSetProto = {
 			// NOTE: this stage does not track suggested feature dependencies...
 			// NOTE: we do not need loop detection active here...
 			var s = Object.keys(
-					expand('suggested', Object.keys(features), {}, { disabled: disabled }))
+					expand('suggested', Object.keys(features), {}, 
+						{
+							disabled: disabled, 
+						}))
 				.filter(function(f){ return !(f in features) })
 			// get suggestion dependencies...
 			// NOTE: we do not care bout missing here...
@@ -858,10 +865,10 @@ var FeatureSetProto = {
 
 		// user filter...
 		// NOTE: we build this out of the full feature list...
-		var filtered_out = filter ?
-			all.filter(function(n){ return !filter.call(that, n) })
-			: [] 
-		disabled = disabled.concat(filtered_out)
+		disabled = disabled
+			.concat(filter ?
+				all.filter(function(n){ return !filter.call(that, n) })
+				: [])
 
 		// build exclusive groups...
 		var exclusive = {}
@@ -883,10 +890,11 @@ var FeatureSetProto = {
 		// Handle exclusive feature groups and aliases...
 		//
 		var conflicts = {}
+		var done = []
 		Object.keys(features)
 			.forEach(function(f){
 				// alias...
-				while(f in exclusive){
+				while(f in exclusive && done.indexOf(f) < 0){
 					var candidates = (exclusive[f] || [])
 						.filter(function(c){ return c in features })
 
@@ -903,15 +911,20 @@ var FeatureSetProto = {
 					}
 
 					// remove the alias...
-					delete features[f]
+					// NOTE: exclusive tag can match a feature tag, thus
+					// 		we do not want to delete such tags...
+					if(!(f in that)){
+						delete features[f]
+					}
 					// replace dependencies...
 					Object.keys(features)
 						.forEach(function(e){
-							var i = features[e].indexOf(f)
+							var i = features[e] ? features[e].indexOf(f) : -1
 							i >= 0
 								&& features[e].splice(i, 1, target)
 						})
 					f = target
+					done.push(f)
 				}
 				
 				// exclusive feature...
@@ -1018,7 +1031,6 @@ var FeatureSetProto = {
 		var list = Object.keys(features)
 		list.forEach(function(f){ expanddeps(list, f) })
 
-
 		// sort by priority...
 		//
 		// NOTE: this will attempt to only move features with explicitly 
@@ -1102,7 +1114,6 @@ var FeatureSetProto = {
 
 			disabled: disabled,
 			excluded: excluded,
-			filtered_out: filtered_out,
 
 			// XXX should these be in a error block???
 			missing: missing,
@@ -1110,8 +1121,9 @@ var FeatureSetProto = {
 			conflicts: conflicts,
 			sort_loop_error: loop_limit <= 0,
 
-			//features: features,
-			//rev_features: rev_features,
+			depends: features,
+			depended: rev_features,
+			//suggests: suggested,
 			//exclusive: exclusive,
 		}
 	},
@@ -1126,17 +1138,22 @@ var FeatureSetProto = {
 		obj = obj || (this.__actions__ || actions.Actions)()
 
 		lst = lst.constructor !== Array ? [lst] : lst
-		var features = this._buildFeatureListReorder(lst, 
-			function(f){
+		var unapplicable = []
+		var features = this._buildFeatureList(lst, 
+			function(n){
 				var f = this[n]
-				// check applicability...
-				if(f.isApplicable && !f.isApplicable.call(this, obj)){
-					//unapplicable.push(n)
+				// check applicability if possible...
+				if(f && f.isApplicable && !f.isApplicable.call(this, obj)){
+					unapplicable.push(n)
 					return false
 				}
 				return true
 			}) 
 		lst = features.list
+
+		// XXX STUB: adapter code, remove when done...
+		features.unapplicable = unapplicable 
+		features.features = features.list
 
 		// check for conflicts...
 		/*/ XXX need to update this section...
