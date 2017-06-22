@@ -1289,9 +1289,13 @@ var FeatureSetProto = {
 				return true
 			}) 
 		features.unapplicable = unapplicable 
-		// cleanup disabled...
+		// cleanup disabled -- filter out unapplicable and excluded features...
+		// NOTE: this is done mainly for cleaner and simpler reporting 
+		// 		later on...
 		features.disabled = features.disabled
-			.filter(function(n){ return unapplicable.indexOf(n) < 0 })
+			.filter(function(n){ 
+				return unapplicable.indexOf(n) < 0 
+					&& features.excluded.indexOf(n) < 0 })
 
 		// if we have critical errors and set verbose...
 		var fatal = features.error 
