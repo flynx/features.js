@@ -240,6 +240,17 @@ Feature.prototype = FeatureProto
 Feature.prototype.constructor = Feature
 
 
+var FeatureLinearizationError =
+module.FeatureLinearizationError = function(data){
+	this.data = data
+	this.message = `Failed to linearise from: ${data.input}`
+	this.toString = function(){
+		return this.message
+	}
+}
+FeatureLinearizationError.prototype = Error
+
+
 var FeatureSetProto = {
 	__feature__: Feature,
 	__actions__: actions.Actions,
@@ -750,6 +761,26 @@ var FeatureSetProto = {
 	//
 	// 	.buildFeatureList(.., filter)
 	// 		-> data
+	//
+	//
+	// Requirements:
+	//	- features are pre-sorted by priority, original order is kept 
+	//		where possible
+	//	- a feature is loaded strictly after it's dependencies
+	//	- features depending on inapplicable feature(s) are also 
+	//		inapplicable (recursive up)
+	//	- inapplicable features are not loaded
+	//	- missing dependency -> missing dependency error
+	//	- suggested features (and their dependencies) do not produce 
+	//		dependency errors, unless explicitly included in dependency 
+	//		graph (i.e. explicitly depended on by some other feature)
+	//	- features with the same exclusive tag are grouped into an 
+	//		exclusive set
+	//	- only the first feature in an exclusive set is loaded, the rest
+	//		are *excluded*
+	//	- exclusive tag can be used to reference (alias) the loaded 
+	//		feature in exclusive set (i.e. exclusive tag can be used as 
+	//		a dependency)
 	//
 	//
 	// return format:
@@ -1308,7 +1339,8 @@ var FeatureSetProto = {
 			features.error.loops.length > 0
 				&& loops
 					.forEach(function(loop){
-						console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
+						console.warn('Feature dependency loops detected:\n\t' 
+							+ loop.join('\n\t\t-> ')) })
 			// report conflicts...
 			Object.keys(features.error.conflicts)
 				.forEach(function(group){
@@ -1323,7 +1355,7 @@ var FeatureSetProto = {
 		// fatal error -- can't load...
 		// XXX should we throw an error here???
 		if(fatal){
-			return
+			throw FeatureLinearizationError(features)
 		}
 
 		// do the setup...
