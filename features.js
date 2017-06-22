@@ -170,6 +170,8 @@ module.FeatureProto = {
 // 	Feature(tag, obj)
 // 		-> feature
 //
+// 	Feature(tag, suggested)
+// 		-> feature
 //
 // 	Feature(tag, actions)
 // 		-> feature
@@ -337,6 +339,7 @@ var FeatureSetProto = {
 	// XXX add dependency loops to .conflicts...
 	// XXX might be a good idea to check dependency loops on feature 
 	// 		construction, too... (???)
+	/*
 	buildFeatureList: function(obj, lst){
 		var that = this
 		obj = obj || {}
@@ -666,8 +669,139 @@ var FeatureSetProto = {
 			conflicts: conflicts,
 		}
 	},
+	setup: function(obj, lst){
+		// if no explicit object is given, just the list...
+		if(lst == null){
+			lst = obj
+			obj = null
+		}
 
-	// Build list of features in an appropriate order to load...
+		obj = obj || (this.__actions__ || actions.Actions)()
+
+		lst = lst.constructor !== Array ? [lst] : lst
+		var features = this.buildFeatureList(obj, lst)
+		lst = features.features
+
+		// check for conflicts...
+		if(Object.keys(features.conflicts).length != 0
+				|| Object.keys(features.missing).length != 0){
+			var m = features.missing
+			var c = features.conflicts
+
+			// build a report...
+			var report = []
+
+			// missing deps...
+			Object.keys(m).forEach(function(k){
+				report.push(k + ': requires following missing features:\n'
+					+'          ' + m[k].join(', '))
+			})
+			report.push('\n')
+
+			// conflicts...
+			Object.keys(c).forEach(function(k){
+				report.push(k + ': must setup after:\n          ' + c[k].join(', '))
+			})
+
+			// break...
+			throw 'Feature dependency error:\n    ' + report.join('\n    ') 
+		}
+
+		// report excluded features...
+		if(this.__verbose__ && features.excluded.length > 0){
+			console.warn('Excluded features due to exclusivity conflict:', 
+					features.excluded.join(', '))
+		}
+
+		// report unapplicable features...
+		if(this.__verbose__ && features.unapplicable.length > 0){
+			console.log('Features not applicable in current context:', 
+					features.unapplicable.join(', '))
+		}
+
+		// do the setup...
+		var that = this
+		var setup = FeatureProto.setup
+		lst.forEach(function(n){
+			// setup...
+			if(that[n] != null){
+				this.__verbose__ && console.log('Setting up feature:', n)
+				setup.call(that[n], obj)
+			}
+		})
+
+		// XXX should we extend this if it already was in the object???
+		obj.features = features
+
+		return obj
+	},
+	//*/
+
+
+	// Build list of features in load order...
+	//
+	// 	.buildFeatureList()
+	// 	.buildFeatureList('*')
+	// 		-> data
+	//
+	// 	.buildFeatureList(feature-tag)
+	// 		-> data
+	//
+	// 	.buildFeatureList([feature-tag, .. ])
+	// 		-> data
+	//
+	// 	.buildFeatureList(.., filter)
+	// 		-> data
+	//
+	//
+	// return format:
+	// 	{
+	//		// input feature feature tags...
+	//		input: [ .. ],
+	//
+	//		// output list of feature tags...
+	//		features: [ .. ],
+	//
+	//		// disabled features...
+	//		disabled: [ .. ],
+	//		// exclusive features that got excluded... 
+	//		excluded: [ .. ],
+	//
+	//		// Errors...
+	//		error: null | {
+	//			// fatal/recoverable error indicator...
+	//			fatal: bool,
+	//
+	//			// missing dependencies...
+	//			// NOTE: this includes tags only included by .depends and 
+	//			//		ignores tags from .suggested...
+	//			missing: [ .. ],
+	//
+	//			// XXX
+	//			conflicts: conflicts,
+	//
+	//			// detected dependency loops (if .length > 0 sets fatal)...
+	//			loops: [ .. ],
+	//
+	//			// sorting loop overflow error (if true sets fatal)...
+	//			sort_loop_overflow: bool,
+	//		},
+	//
+	//		// Introspection...
+	//		// index of features and their list of dependencies...
+	//		depends: {
+	//			feature-tag: [ feature-tag, .. ],
+	//			..
+	//		},
+	//		// index of features and list of features depending on them...
+	//		// XXX should this include suggestions or should we do them 
+	//		//		in a separate list...
+	//		depended: { 
+	//			feature-tag: [ feature-tag, .. ],
+	//			..
+	//		},
+	// 	}
+	//
 	//
 	// Algorithm:
 	// 	- expand features:
@@ -679,11 +813,12 @@ var FeatureSetProto = {
 	// 		- by priority
 	// 		- by dependency (detect loops/errors)
 	//
+	//
 	// XXX differences to .buildFeatureList(..):
 	// 		- order is slightly different -- within expectations...
 	// 		- this includes meta-features...
 	// 			this seems to be more logical and more flexible...
-	_buildFeatureList: function(lst, filter){
+	buildFeatureList: function(lst, filter){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
 		lst = lst.constructor !== Array ? [lst] : lst
@@ -1085,42 +1220,32 @@ var FeatureSetProto = {
 
 
 		//-------------------------------------------------------------
-
-		// XXX should we report stuff here???
-		// report dependency loops...
-		//
-		// NOTE: a loop error should be raised only when one of the loop elements
-		// 		is encountered during the linearisation process...
-		// XXX should looping features get disabled or be loaded in random-ish order???
-		// 		...#2 case will need to be handled at the sorting stage...
-		loops.length > 0
-			&& loops
-				.forEach(function(loop){
-					console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
-		// report conflicts...
-		Object.keys(conflicts)
-			.forEach(function(group){
-				console.error('Exclusive "'+ group +'" conflict at:', conflicts[group]) })
-		// report loop limit...
-		// XXX store this to data...
-		loop_limit <= 0
-			&& console.error('Hit loop limit while sorting dependencies!')
-
-
+		
 		return {
 			input: lst,
 
-			list: list,
+			features: list,
 
 			disabled: disabled,
 			excluded: excluded,
 
-			// XXX should these be in a error block???
-			missing: missing,
-			loops: loops,
-			conflicts: conflicts,
-			sort_loop_error: loop_limit <= 0,
+			// errors and conflicts...
+			error: (loops.length > 0 
+					|| Object.keys(conflicts).length > 0 
+					|| loop_limit <= 0 
+					|| missing.length > 0) ?
+				{
+					missing: missing,
+					conflicts: conflicts,
 
+					// fatal stuff...
+					fatal: loops.length > 0 || loop_limit <= 0,
+					loops: loops,
+					sort_loop_overflow: loop_limit <= 0,
+				}
+				: null,
+
+			// introspection...
 			depends: features,
 			depended: rev_features,
 			//suggests: suggested,
@@ -1128,18 +1253,34 @@ var FeatureSetProto = {
 		}
 	},
 
-	_setup: function(obj, lst){
-		// if no explicit object is given, just the list...
+	// Setup features...
+	//
+	//	Setup features on existing actions object...
+	//	.setup(actions, [feature-tag, ...])
+	//		-> actions
+	//
+	//	Setup features on a new actions object...
+	//	.setup(feature-tag)
+	//	.setup([feature-tag, ...])
+	//		-> actions
+	//
+	//
+	// This will add .unapplicable to the output of .buildFeatureList(..) 
+	// and to .features of the resulting object...
+	//
+	// NOTE: this will store the build result in .features of the output 
+	// 		actions object.
+	setup: function(obj, lst){
+		// no explicit object is given...
 		if(lst == null){
 			lst = obj
 			obj = null
 		}
-
 		obj = obj || (this.__actions__ || actions.Actions)()
+		lst = lst instanceof Array ? lst : [lst]
 
-		lst = lst.constructor !== Array ? [lst] : lst
 		var unapplicable = []
-		var features = this._buildFeatureList(lst, 
+		var features = this.buildFeatureList(lst, 
 			function(n){
 				var f = this[n]
 				// check applicability if possible...
@@ -1149,138 +1290,50 @@ var FeatureSetProto = {
 				}
 				return true
 			}) 
-		lst = features.list
-
-		// XXX STUB: adapter code, remove when done...
 		features.unapplicable = unapplicable 
-		features.features = features.list
+		// cleanup disabled...
+		features.disabled = features.disabled
+			.filter(function(n){ return unapplicable.indexOf(n) < 0 })
 
-		// check for conflicts...
-		/*/ XXX need to update this section...
-		if(Object.keys(features.conflicts).length != 0
-				|| Object.keys(features.missing).length != 0){
-			var m = features.missing
-			var c = features.conflicts
+		// if we have critical errors and set verbose...
+		var fatal = features.error 
+			&& (features.error.loops.length > 0 || features.error.sort_loop_overflow)
+		var verbose = this.__verbose__ || fatal 
 
-			// build a report...
-			var report = []
-
-			// missing deps...
-			Object.keys(m).forEach(function(k){
-				report.push(k + ': requires following missing features:\n'
-					+'          ' + m[k].join(', '))
-			})
-			report.push('\n')
-
-			// conflicts...
-			Object.keys(c).forEach(function(k){
-				report.push(k + ': must setup after:\n          ' + c[k].join(', '))
-			})
-
-			// break...
-			throw 'Feature dependency error:\n    ' + report.join('\n    ') 
+		// report stuff...
+		if(verbose){
+			// report dependency loops...
+			features.error.loops.length > 0
+				&& loops
+					.forEach(function(loop){
+						console.warn('feature loop detected:\n\t' + loop.join('\n\t\t-> ')) })
+			// report conflicts...
+			Object.keys(features.error.conflicts)
+				.forEach(function(group){
+					console.error('Exclusive "'+ group +'" conflict at:', conflicts[group]) })
+			// report loop limit...
+			features.error.sort_loop_overflow
+				&& console.error('Hit loop limit while sorting dependencies!')
 		}
 
-		// report excluded features...
-		if(this.__verbose__ && features.excluded.length > 0){
-			console.warn('Excluded features due to exclusivity conflict:', 
-					features.excluded.join(', '))
-		}
+		obj.features = features
 
-		// report unapplicable features...
-		if(this.__verbose__ && features.unapplicable.length > 0){
-			console.log('Features not applicable in current context:', 
-					features.unapplicable.join(', '))
+		// fatal error -- can't load...
+		// XXX should we throw an error here???
+		if(fatal){
+			return
 		}
-		//*/
 
 		// do the setup...
 		var that = this
 		var setup = FeatureProto.setup
-		lst.forEach(function(n){
+		features.features.forEach(function(n){
 			// setup...
 			if(that[n] != null){
 				this.__verbose__ && console.log('Setting up feature:', n)
 				setup.call(that[n], obj)
 			}
 		})
-
-		// XXX should we extend this if it already was in the object???
-		obj.features = features
-
-		return obj
-	},
-
-	//
-	//	.setup(<actions>, [<feature>, ...])
-	//		-> <actions>
-	//
-	//	.setup([<feature>, ...])
-	//		-> <actions>
-	//
-	setup: function(obj, lst){
-		// if no explicit object is given, just the list...
-		if(lst == null){
-			lst = obj
-			obj = null
-		}
-
-		obj = obj || (this.__actions__ || actions.Actions)()
-
-		lst = lst.constructor !== Array ? [lst] : lst
-		var features = this.buildFeatureList(obj, lst)
-		lst = features.features
-
-		// check for conflicts...
-		if(Object.keys(features.conflicts).length != 0
-				|| Object.keys(features.missing).length != 0){
-			var m = features.missing
-			var c = features.conflicts
-
-			// build a report...
-			var report = []
-
-			// missing deps...
-			Object.keys(m).forEach(function(k){
-				report.push(k + ': requires following missing features:\n'
-					+'          ' + m[k].join(', '))
-			})
-			report.push('\n')
-
-			// conflicts...
-			Object.keys(c).forEach(function(k){
-				report.push(k + ': must setup after:\n          ' + c[k].join(', '))
-			})
-
-			// break...
-			throw 'Feature dependency error:\n    ' + report.join('\n    ') 
-		}
-
-		// report excluded features...
-		if(this.__verbose__ && features.excluded.length > 0){
-			console.warn('Excluded features due to exclusivity conflict:', 
-					features.excluded.join(', '))
-		}
-
-		// report unapplicable features...
-		if(this.__verbose__ && features.unapplicable.length > 0){
-			console.log('Features not applicable in current context:', 
-					features.unapplicable.join(', '))
-		}
-
-		// do the setup...
-		var that = this
-		var setup = FeatureProto.setup
-		lst.forEach(function(n){
-			// setup...
-			if(that[n] != null){
-				this.__verbose__ && console.log('Setting up feature:', n)
-				setup.call(that[n], obj)
-			}
-		})
-
-		// XXX should we extend this if it already was in the object???
-		obj.features = features
 
 		return obj
 	},
@@ -1296,7 +1349,6 @@ var FeatureSetProto = {
 	},
 
 	// shorthand for: Feature(<feature-set>, ...)
-	// XXX should this return this?
 	Feature: function(){
 		return this.__feature__.apply(null, [this].concat(args2array(arguments))) },
 }
@@ -1304,7 +1356,6 @@ var FeatureSetProto = {
 
 var FeatureSet =
 module.FeatureSet = object.makeConstructor('FeatureSet', FeatureSetProto)
-
 
 
 //---------------------------------------------------------------------
