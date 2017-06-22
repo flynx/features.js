@@ -19,6 +19,20 @@ var args2array = function(a){ return [].slice.call(a) }
 
 
 /*********************************************************************/
+
+var FeatureLinearizationError =
+module.FeatureLinearizationError = 
+function(data){
+	this.data = data
+	this.message = `Failed to linearise from: ${data.input}`
+	this.toString = function(){
+		return this.message
+	}
+}
+
+
+
+/*********************************************************************/
 //
 // Feature attributes:
 // 	.tag			- feature tag (string)
@@ -239,16 +253,6 @@ function Feature(feature_set, tag, obj){
 Feature.prototype = FeatureProto
 Feature.prototype.constructor = Feature
 
-
-var FeatureLinearizationError =
-module.FeatureLinearizationError = function(data){
-	this.data = data
-	this.message = `Failed to linearise from: ${data.input}`
-	this.toString = function(){
-		return this.message
-	}
-}
-FeatureLinearizationError.prototype = Error
 
 
 var FeatureSetProto = {
@@ -1331,31 +1335,30 @@ var FeatureSetProto = {
 		// if we have critical errors and set verbose...
 		var fatal = features.error 
 			&& (features.error.loops.length > 0 || features.error.sort_loop_overflow)
-		var verbose = this.__verbose__ || fatal 
 
 		// report stuff...
-		if(verbose){
+		if(this.__verbose__){
+			var error = features.error
 			// report dependency loops...
-			features.error.loops.length > 0
-				&& loops
+			error.loops.length > 0
+				&& error.loops
 					.forEach(function(loop){
 						console.warn('Feature dependency loops detected:\n\t' 
 							+ loop.join('\n\t\t-> ')) })
 			// report conflicts...
-			Object.keys(features.error.conflicts)
+			Object.keys(error.conflicts)
 				.forEach(function(group){
-					console.error('Exclusive "'+ group +'" conflict at:', conflicts[group]) })
+					console.error('Exclusive "'+ group +'" conflict at:', error.conflicts[group]) })
 			// report loop limit...
-			features.error.sort_loop_overflow
+			error.sort_loop_overflow
 				&& console.error('Hit loop limit while sorting dependencies!')
 		}
 
 		obj.features = features
 
 		// fatal error -- can't load...
-		// XXX should we throw an error here???
 		if(fatal){
-			throw FeatureLinearizationError(features)
+			throw new FeatureLinearizationError(features)
 		}
 
 		// do the setup...
