@@ -24,7 +24,7 @@ var FeatureLinearizationError =
 module.FeatureLinearizationError = 
 function(data){
 	this.data = data
-	this.message = `Failed to linearise from: ${data.input}`
+	this.message = 'Failed to linearise.'
 	this.toString = function(){
 		return this.message
 	}
