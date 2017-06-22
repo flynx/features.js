@@ -84,9 +84,7 @@ var FeatureProto =
 module.FeatureProto = {
 	tag: null,
 
-	isApplicable: function(actions){
-		return true
-	},
+	isApplicable: function(actions){ return true },
 
 	getPriority: function(){
 		var res = this.priority || 0
