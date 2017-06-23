@@ -330,8 +330,16 @@ var FeatureSetProto = {
 	//			//		ignores tags from .suggested...
 	//			missing: [ .. ],
 	//
-	//			// XXX
-	//			conflicts: conflicts,
+	//			// exclusive feature conflicts...
+	//			// This will include the explicitly required conflicting
+	//			// exclusive features.
+	//			// NOTE: this is not an error, but indicates that the 
+	//			//		system tried to fix the state by disabling all
+	//			//		but the first feature.
+	//			conflicts: {
+	//				exclusive-tag: [ feature-tag, .. ],
+	//				..
+	//			},
 	//
 	//			// detected dependency loops (if .length > 0 sets fatal)...
 	//			loops: [ .. ],
@@ -559,6 +567,7 @@ var FeatureSetProto = {
 				: [])
 
 		// build exclusive groups...
+		// XXX need to sort the values to the same order as given features...
 		var exclusive = {}
 		var rev_exclusive = {}
 		all
@@ -577,9 +586,26 @@ var FeatureSetProto = {
 		//-------------------------------- Exclusive groups/aliases ---
 		// Handle exclusive feature groups and aliases...
 		//
+		// pre-sort exclusive feature by their occurrence in dependency
+		// tree...
+		// XXX is this the correct approach???
+		var loaded = Object.keys(features)
+		Object.keys(exclusive)
+			.forEach(function(k){
+				exclusive[k] = exclusive[k]
+					.map(function(e, i){ return [e, i] })
+					.sort(function(a, b){
+						var i = loaded.indexOf(a[0])
+						var j = loaded.indexOf(b[0]) 
+						return (i > 0 && j > 0) ? 
+							i - j 
+							: a[1] - b[1]
+					})
+					.map(function(e){ return e[0] }) })
+		// do the actual handling...
 		var conflicts = {}
 		var done = []
-		Object.keys(features)
+		loaded
 			.forEach(function(f){
 				// alias...
 				while(f in exclusive && done.indexOf(f) < 0){
