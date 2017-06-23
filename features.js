@@ -597,7 +597,7 @@ var FeatureSetProto = {
 					.sort(function(a, b){
 						var i = loaded.indexOf(a[0])
 						var j = loaded.indexOf(b[0]) 
-						return (i > 0 && j > 0) ? 
+						return (i >= 0 && j >= 0) ? 
 							i - j 
 							: a[1] - b[1]
 					})
