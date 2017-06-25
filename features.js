@@ -307,7 +307,18 @@ var FeatureSetProto = {
 	//		a dependency)
 	//
 	//
-	// return format:
+	// Algorithm:
+	// 	- expand features:
+	// 		- handle dependencies (detect loops)
+	// 		- handle suggestions
+	// 		- handle explicitly disabled features (detect loops)
+	// 		- handle exclusive feature groups/aliases (handle conflicts)
+	// 	- sort list of features:
+	// 		- by priority
+	// 		- by dependency (detect loops/errors)
+	//
+	//
+	// Return format:
 	// 	{
 	//		// input feature feature tags...
 	//		input: [ .. ],
@@ -363,22 +374,6 @@ var FeatureSetProto = {
 	//		},
 	// 	}
 	//
-	//
-	// Algorithm:
-	// 	- expand features:
-	// 		- handle dependencies (detect loops)
-	// 		- handle suggestions
-	// 		- handle explicitly disabled features (detect loops)
-	// 		- handle exclusive feature groups/aliases (handle conflicts)
-	// 	- sort list of features:
-	// 		- by priority
-	// 		- by dependency (detect loops/errors)
-	//
-	//
-	// XXX differences to .buildFeatureList(..):
-	// 		- order is slightly different -- within expectations...
-	// 		- this includes meta-features...
-	// 			this seems to be more logical and more flexible...
 	buildFeatureList: function(lst, filter){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
@@ -521,12 +516,13 @@ var FeatureSetProto = {
 			//
 			// NOTE: this stage does not track suggested feature dependencies...
 			// NOTE: we do not need loop detection active here...
-			var s = Object.keys(
-					expand('suggested', Object.keys(features), {}, 
-						{
-							disabled: disabled, 
-						}))
-				.filter(function(f){ return !(f in features) })
+			var s = expand('suggested', Object.keys(features), {}, { disabled: disabled })
+			s = Object.keys(s)
+				.filter(function(f){ 
+					// populate the tree of feature suggestions...
+					suggests[f] = s[f]
+					// filter out what's in features already...
+					return !(f in features) })
 			// get suggestion dependencies...
 			// NOTE: we do not care bout missing here...
 			s = expand('depends', s, {}, 
@@ -545,6 +541,7 @@ var FeatureSetProto = {
 					// mix suggested into features...
 					} else {
 						features[f] = s[f]
+						suggested[f] = (s[f] || []).slice()
 					}
 				})
 
@@ -558,6 +555,9 @@ var FeatureSetProto = {
 		var disable_loops = []
 		var disabled = []
 		var missing = []
+		// XXX
+		var suggests = {}
+		var suggested = {}
 
 		// user filter...
 		// NOTE: we build this out of the full feature list...
@@ -657,9 +657,6 @@ var FeatureSetProto = {
 		var excluded = []
 		Object.keys(conflicts)
 			.forEach(function(group){
-				// XXX BUG: for some reason this does not behave 
-				// 		deterministically and in some cases the order 
-				// 		of the list is not stable...
 				excluded = excluded.concat(conflicts[group].slice(1))})
 		disabled = disabled.concat(excluded)
 
@@ -678,6 +675,7 @@ var FeatureSetProto = {
 						rev_features[d] = (rev_features[d] || []).concat([f]) }) })
 
 		// clear dependency trees containing disabled features...
+		var suggested_clear = []
 		do {
 			var expanded_disabled = false
 			disabled
@@ -692,8 +690,26 @@ var FeatureSetProto = {
 								disabled.push(f)
 							}
 						})
+
 					// delete the feature itself...
+					var s = suggests[d] || []
+					delete suggests[d]
 					delete features[d] 
+
+					// clear suggested...
+					s
+						.forEach(function(f){
+							if(disabled.indexOf(f) < 0 
+									// not depended/suggested by any of 
+									// the non-disabled features...
+									&& Object.values(features)
+										.concat(Object.values(suggests))
+											.filter(n => n.indexOf(f) >= 0)
+											.length == 0){
+								expanded_disabled = true
+								disabled.push(f)
+							}
+						})
 				})
 		} while(expanded_disabled)
 
@@ -709,6 +725,7 @@ var FeatureSetProto = {
 					// keep features that have no sources left, i.e. orphans...
 					.length == 0 })
 			.forEach(function(f){
+				console.log('ORPHANED:', f)
 				disabled.push(f)
 				delete features[f]
 			})
@@ -829,7 +846,8 @@ var FeatureSetProto = {
 			// introspection...
 			depends: features,
 			depended: rev_features,
-			//suggests: suggested,
+			suggests: suggests,
+			suggested: suggested,
 			//exclusive: exclusive,
 		}
 	},
