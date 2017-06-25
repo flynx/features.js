@@ -374,6 +374,8 @@ var FeatureSetProto = {
 	//		},
 	// 	}
 	//
+	// XXX should exclusive conflicts resolve to first (current state)
+	//		feature or last in an exclusive group???
 	buildFeatureList: function(lst, filter){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
@@ -488,7 +490,12 @@ var FeatureSetProto = {
 		// 							directive gets disabled as a result
 		// 		disabled		- list of disabled features
 		// 		missing			- list of missing features
+		// 		missing_suggested
+		// 						- list of missing suggested features and
+		// 							suggested feature dependencies
 		// 		exclusive		- exclusive feature index
+		// 		suggests		- index of feature suggestions (full)
+		// 		suggested		- suggested feature dependency index
 		// NOTE: the above containers will get updated as a side-effect.
 		// NOTE: all of the above values are defined near the location 
 		// 		they are first used/initiated...
@@ -516,7 +523,11 @@ var FeatureSetProto = {
 			//
 			// NOTE: this stage does not track suggested feature dependencies...
 			// NOTE: we do not need loop detection active here...
-			var s = expand('suggested', Object.keys(features), {}, { disabled: disabled })
+			var s = expand('suggested', Object.keys(features), {}, 
+				{ 
+					disabled: disabled,
+					missing: missing_suggested,
+				})
 			s = Object.keys(s)
 				.filter(function(f){ 
 					// populate the tree of feature suggestions...
@@ -531,6 +542,7 @@ var FeatureSetProto = {
 					disabled: disabled, 
 					disable_loops: disable_loops, 
 					exclusive: exclusive,
+					missing: missing_suggested,
 				})
 			Object.keys(s)
 				.forEach(function(f){ 
@@ -555,7 +567,7 @@ var FeatureSetProto = {
 		var disable_loops = []
 		var disabled = []
 		var missing = []
-		// XXX
+		var missing_suggested = []
 		var suggests = {}
 		var suggested = {}
 
@@ -657,6 +669,7 @@ var FeatureSetProto = {
 		var excluded = []
 		Object.keys(conflicts)
 			.forEach(function(group){
+				// XXX should this resolve to the last of the first feature???
 				excluded = excluded.concat(conflicts[group].slice(1))})
 		disabled = disabled.concat(excluded)
 
@@ -831,9 +844,11 @@ var FeatureSetProto = {
 			error: (loops.length > 0 
 					|| Object.keys(conflicts).length > 0 
 					|| loop_limit <= 0 
-					|| missing.length > 0) ?
+					|| missing.length > 0
+					|| missing_suggested.length > 0) ?
 				{
 					missing: missing,
+					missing_suggested: missing_suggested,
 					conflicts: conflicts,
 
 					// fatal stuff...
