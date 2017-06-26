@@ -29,6 +29,9 @@ function(data){
 		return this.message
 	}
 }
+FeatureLinearizationError.prototype = Object.create(new Error)
+FeatureLinearizationError.prototype.constructor = FeatureLinearizationError
+
 
 
 
