@@ -35,12 +35,12 @@ FeatureLinearizationError.prototype.constructor = FeatureLinearizationError
 
 
 
-/*********************************************************************/
+//---------------------------------------------------------------------
 //
 // Feature attributes:
 // 	.tag			- feature tag (string)
-// 					  this is used to identify the feature, its event handlers
-// 					  and DOM elements.
+// 					  this is used to identify the feature, its event 
+// 					  handlers and DOM elements.
 //
 // 	.title			- feature name (string | null)
 // 	.doc			- feature description (string | null)
@@ -51,20 +51,20 @@ FeatureLinearizationError.prototype.constructor = FeatureLinearizationError
 // 					  	- number
 // 					  	- null (0, default)
 // 					  features with higher priority will be setup first,
-// 					  features with the same priority will be run in order of
-// 					  occurrence.
+// 					  features with the same priority will be run in 
+// 					  order of occurrence.
 // 	.suggested		- list of optional suggested features, these are not 
 // 					  required but setup if available.
-// 					  This is useful for defining meta features but without
-// 					  making each sub-feature a strict dependency.
-// 	.depends		- feature dependencies -- tags of features that must setup
-// 					  before the feature (list | null)
-// 					  NOTE: a feature can depend on an exclusive tag, this will
-// 					  		remove the need to track which specific exclusive
-// 					  		tagged feature is loaded...
+// 					  This is useful for defining meta features but 
+// 					  without making each sub-feature a strict dependency.
+// 	.depends		- feature dependencies -- tags of features that must 
+// 					  setup before the feature (list | null)
+// 					  NOTE: a feature can depend on an exclusive tag, 
+// 					  		this will remove the need to track which 
+// 					  		specific exclusive tagged feature is loaded...
 // 	.exclusive		- feature exclusivity tags (list | null)
-// 					  an exclusivity group enforces that only one feature in
-// 					  it will be run, i.e. the first / highest priority.
+// 					  an exclusivity group enforces that only one feature
+// 					  in it will be run, i.e. the first / highest priority.
 //
 // 	.actions		- action object containing feature actions (ActionSet | null)
 // 					  this will be mixed into the base object on .setup()
@@ -174,6 +174,7 @@ module.FeatureProto = {
 }
 
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // XXX is hard-coded default feature-set a good way to go???
 //
 // 	Feature(obj)
@@ -257,6 +258,7 @@ Feature.prototype = FeatureProto
 Feature.prototype.constructor = Feature
 
 
+//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 var FeatureSetProto = {
 	__feature__: Feature,
