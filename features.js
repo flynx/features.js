@@ -609,15 +609,18 @@ var FeatureSetProto = {
 		var loaded = Object.keys(features)
 		Object.keys(exclusive)
 			.forEach(function(k){
+				var l = exclusive[k].length
 				exclusive[k] = exclusive[k]
 					.map(function(e, i){ return [e, i] })
 					.sort(function(a, b){
 						var i = loaded.indexOf(a[0])
 						var j = loaded.indexOf(b[0]) 
-						return (i >= 0 && j >= 0) ? 
-							i - j 
-							: a[1] - b[1]
-					})
+						// keep the missing at the end...
+						i = i < 0 ? Infinity : i
+						j = j < 0 ? Infinity : j
+						// NOTE: Infinity - Infinity is NaN, so we need 
+						// 		to guard against it...
+						return i - j || 0 })
 					.map(function(e){ return e[0] }) })
 		// do the actual handling...
 		var conflicts = {}
