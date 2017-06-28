@@ -605,7 +605,6 @@ var FeatureSetProto = {
 		//
 		// pre-sort exclusive feature by their occurrence in dependency
 		// tree...
-		// XXX is this the correct approach???
 		var loaded = Object.keys(features)
 		Object.keys(exclusive)
 			.forEach(function(k){
