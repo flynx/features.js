@@ -311,6 +311,12 @@ var FeatureSetProto = {
 	//		feature in exclusive set (i.e. exclusive tag can be used as 
 	//		a dependency)
 	//
+	// NOTE: an exclusive group name can be used as an alias.
+	// NOTE: if an alias is used and no feature from that exclusive group
+	// 		is explicitly included then the actual loaded feature will 
+	// 		depend on the load order, which in an async world is not 
+	// 		deterministic...
+	//
 	//
 	// Algorithm:
 	// 	- expand features:
@@ -387,6 +393,30 @@ var FeatureSetProto = {
 		lst = lst.constructor !== Array ? [lst] : lst
 
 		var that = this
+
+		// Pre-sort exclusive feature by their occurrence in dependency
+		// tree...
+		//
+		// NOTE: there can be a case when an exclusive alias is used but
+		//		no feature in a group is loaded, in this case which 
+		//		feature is actually loaded depends on the load order...
+		var sortExclusive = function(){
+			var loaded = Object.keys(features)
+			Object.keys(exclusive)
+				.forEach(function(k){
+					exclusive[k] = exclusive[k]
+						.map(function(e, i){ return [e, i] })
+						.sort(function(a, b){
+							var i = loaded.indexOf(a[0])
+							var j = loaded.indexOf(b[0]) 
+							// keep the missing at the end...
+							i = i < 0 ? Infinity : i
+							j = j < 0 ? Infinity : j
+							// NOTE: Infinity - Infinity is NaN, so we need 
+							// 		to guard against it...
+							return i - j || 0 })
+						.map(function(e){ return e[0] }) })
+		}
 
 		// Expand feature references (recursive)...
 		//
@@ -562,6 +592,8 @@ var FeatureSetProto = {
 					}
 				})
 
+			sortExclusive()
+
 			return features
 		}
 
@@ -602,26 +634,6 @@ var FeatureSetProto = {
 
 		//-------------------------------- Exclusive groups/aliases ---
 		// Handle exclusive feature groups and aliases...
-		//
-		// pre-sort exclusive feature by their occurrence in dependency
-		// tree...
-		var loaded = Object.keys(features)
-		Object.keys(exclusive)
-			.forEach(function(k){
-				var l = exclusive[k].length
-				exclusive[k] = exclusive[k]
-					.map(function(e, i){ return [e, i] })
-					.sort(function(a, b){
-						var i = loaded.indexOf(a[0])
-						var j = loaded.indexOf(b[0]) 
-						// keep the missing at the end...
-						i = i < 0 ? Infinity : i
-						j = j < 0 ? Infinity : j
-						// NOTE: Infinity - Infinity is NaN, so we need 
-						// 		to guard against it...
-						return i - j || 0 })
-					.map(function(e){ return e[0] }) })
-		// do the actual handling...
 		var conflicts = {}
 		var done = []
 		loaded
