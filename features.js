@@ -400,7 +400,7 @@ var FeatureSetProto = {
 		// NOTE: there can be a case when an exclusive alias is used but
 		//		no feature in a group is loaded, in this case which 
 		//		feature is actually loaded depends on the load order...
-		var sortExclusive = function(){
+		var sortExclusive = function(features){
 			var loaded = Object.keys(features)
 			Object.keys(exclusive)
 				.forEach(function(k){
@@ -592,7 +592,7 @@ var FeatureSetProto = {
 					}
 				})
 
-			sortExclusive()
+			sortExclusive(features)
 
 			return features
 		}
@@ -636,7 +636,7 @@ var FeatureSetProto = {
 		// Handle exclusive feature groups and aliases...
 		var conflicts = {}
 		var done = []
-		loaded
+		Object.keys(features)
 			.forEach(function(f){
 				// alias...
 				while(f in exclusive && done.indexOf(f) < 0){
