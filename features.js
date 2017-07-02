@@ -898,11 +898,27 @@ var FeatureSetProto = {
 	//		-> actions
 	//
 	//
-	// This will add .unapplicable to the output of .buildFeatureList(..) 
-	// and to .features of the resulting object...
+	// This will set .features on the object.
+	//
+	// .features format:
+	// 	{
+	// 		// the current feature set object...
+	// 		FeatureSet: feature-set,
+	//
+	// 		// list of features not applicable in current context...
+	// 		//
+	// 		// i.e. the features that defined .isApplicable(..) and it 
+	// 		// returned false when called.
+	// 		unapplicable: [ feature-tag, .. ],
+	//
+	// 		// output of .buildFeatureList(..)...
+	// 		...
+	// 	}
 	//
 	// NOTE: this will store the build result in .features of the output 
 	// 		actions object.
+	// NOTE: .features is reset even if a FeatureLinearizationError error
+	// 		is thrown.
 	setup: function(obj, lst){
 		// no explicit object is given...
 		if(lst == null){
@@ -953,6 +969,8 @@ var FeatureSetProto = {
 			error.sort_loop_overflow
 				&& console.error('Hit loop limit while sorting dependencies!')
 		}
+
+		features.FeatureSet = this
 
 		obj.features = features
 
