@@ -134,6 +134,14 @@ module.FeatureProto = {
 		if(this.config != null 
 				|| (this.actions != null 
 					&& this.actions.config != null)){
+			// sanity check -- warn of config shadowing...
+			if(this.config && this.actions.config){
+				console.warn('Feature config shadowed: '
+					+'both .config (used) and .actions.config (ignored) are defined for:', 
+					this.tag, 
+					this)
+			}
+
 			var config = this.config = this.config || this.actions.config
 
 			if(actions.config == null){

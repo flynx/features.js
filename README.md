@@ -55,9 +55,13 @@ feature_set.Feature({
   depends: [],
 
   // Exclusive tag (optional)
-  exclusive: 'Example feature',
+  // NOTE: a feature can be a member of more than one exclusive group,
+  //	to list more than one use an Array...
+  exclusive: 'Example',
 
   // feature configuration (optional)
+  // NOTE: if not present here this will be taken from .actions.config
+  // NOTE: this takes priority over .actions.config
   config: {
     option: 'value',
     // ...
@@ -65,6 +69,10 @@ feature_set.Feature({
 
   // actions (optional)
   actions: Actions({
+    // alternative configuration location...
+    config: {
+		// ...
+	}
     // ...
   })
 
