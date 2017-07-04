@@ -161,20 +161,28 @@ module.FeatureProto = {
 
 		return this
 	},
+
+	// XXX need to revise this...
+	// 		- .mixout(..) is available directly from the object while 
+	// 			.remove(..) is not...
+	// 		- might be a good idea to add a specific lifecycle actions to
+	// 			enable feautures to handle their removal correctly... 
 	remove: function(actions){
 		if(this.actions != null){
-			actions.mixout(this.actions)
+			actions.mixout(this.tag || this.actions)
 		}
 
 		if(this.handlers != null){
 			actions.off('*', this.tag)
 		}
 
+		// XXX
 		if(this.hasOwnProperty('remove') && this.setup !== FeatureProto.remove){
 			this.remove(actions)
 		}
 
 		// remove feature DOM elements...
+		// XXX
 		actions.ribbons.viewer.find('.' + this.tag).remove()
 
 		return this
@@ -1001,6 +1009,13 @@ var FeatureSetProto = {
 
 		return obj
 	},
+
+	// XXX revise...
+	// 		...the main problem here is that .mixout(..) is accesible 
+	// 		directly from actions while the feature .remove(..) method
+	// 		is not...
+	// 		...would be nice to expose the API to actions directly or 
+	// 		keep it only in features...
 	remove: function(obj, lst){
 		lst = lst.constructor !== Array ? [lst] : lst
 		var that = this

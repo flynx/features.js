@@ -61,7 +61,8 @@ feature_set.Feature({
 
   // feature configuration (optional)
   // NOTE: if not present here this will be taken from .actions.config
-  // NOTE: this takes priority over .actions.config
+  // NOTE: this takes priority over .actions.config, it is not recommended
+  //	to define both.
   config: {
     option: 'value',
     // ...
