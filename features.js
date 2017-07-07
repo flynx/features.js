@@ -1037,14 +1037,16 @@ var FeatureSetProto = {
 
 		var graph = ''
 		graph += 'digraph ImageGrid {\n'
-		lst.forEach(function(f){
-			var deps = dep[f] || []
+		lst
+			.filter(function(f){ return f in dep })
+			.forEach(function(f){
+				var deps = dep[f].depends || []
 
-			deps.length > 0 ?
-				deps.forEach(function(d){
-					graph += `\t"${f}" -> "${d}";\n` })
-				: (graph += `\t"${f}";\n`)
-		})
+				deps.length > 0 ?
+					deps.forEach(function(d){
+						graph += `\t"${f}" -> "${d}";\n` })
+					: (graph += `\t"${f}";\n`)
+			})
 		graph += '}'
 
 		return graph
