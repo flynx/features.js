@@ -1027,6 +1027,29 @@ var FeatureSetProto = {
 		})
 	},
 
+
+	// Generate a Graphviz graph from features...
+	//
+	// XXX experimental...
+	gvGraph: function(lst, dep){
+		lst = lst || this.features
+		dep = dep || this
+
+		var graph = ''
+		graph += 'digraph ImageGrid {\n'
+		lst.forEach(function(f){
+			var deps = dep[f] || []
+
+			deps.length > 0 ?
+				deps.forEach(function(d){
+					graph += `\t"${f}" -> "${d}";\n` })
+				: (graph += `\t"${f}";\n`)
+		})
+		graph += '}'
+
+		return graph
+	},
+
 	// shorthand for: Feature(<feature-set>, ...)
 	Feature: function(){
 		return this.__feature__.apply(null, [this].concat(args2array(arguments))) },
