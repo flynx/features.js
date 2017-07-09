@@ -299,6 +299,55 @@ var FeatureSetProto = {
 					&& that[e] instanceof Feature }) 
 	},
 
+	// build exclusive groups...
+	//
+	// 	Get all exclusive tags...
+	// 	.getExclusive()
+	// 	.getExclusive('*')
+	// 		-> exclusive
+	//
+	// 	Get specific exclusive tags...
+	// 	.getExclusive(tag)
+	// 	.getExclusive([tag, ..])
+	// 		-> exclusive
+	//
+	// If features is given, only consider the features in list.
+	// If rev_exclusive is given, also build a reverse exclusive feature
+	// list.
+	//
+	// output format:
+	// 	{
+	// 		exclusive-tag: [
+	// 			feature-tag,
+	// 			...
+	// 		],
+	// 		...
+	// 	}
+	//
+	getExclusive: function(tag, features, rev_exclusive){
+		tag = tag == null || tag == '*' ? '*'
+			: tag instanceof Array ? tag
+			: [tag]
+
+		features = features || this.features
+		rev_exclusive = rev_exclusive || {}
+
+		var that = this
+		var exclusive = {}
+		features
+			.filter(function(f){ return !!that[f].exclusive })
+			.forEach(function(k){
+				(that[k].exclusive || [])
+					.forEach(function(e){
+						// skip tags not explicitly requested...
+						if(tag != '*' && tag.indexOf(e) < 0){
+							return
+						}
+						exclusive[e] = (exclusive[e] || []).concat([k]) 
+						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
+		return exclusive
+	},
+
 	// Build list of features in load order...
 	//
 	// 	.buildFeatureList()
@@ -640,15 +689,8 @@ var FeatureSetProto = {
 
 		// build exclusive groups...
 		// XXX need to sort the values to the same order as given features...
-		var exclusive = {}
 		var rev_exclusive = {}
-		all
-			.filter(function(f){ return !!that[f].exclusive })
-			.forEach(function(k){
-				(that[k].exclusive || [])
-					.forEach(function(e){
-						exclusive[e] = (exclusive[e] || []).concat([k]) 
-						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
+		var exclusive = this.getExclusive('*', all, rev_exclusive)
 
 
 		//-------------------------------- Stage 1: expand features ---
