@@ -103,11 +103,18 @@ module.FeatureProto = {
 
 	isApplicable: function(actions){ return true },
 
-	getPriority: function(){
+	getPriority: function(human_readable){
 		var res = this.priority || 0
-		return res == 'high' ? 99
+		res = res == 'high' ? 99
 			: res == 'low' ? -99
 			: res == 'medium' ? 0
+			: res == 'normal' ? 0
+			: res
+		return human_readable ?
+				(res == 99 ? 'high'
+					: res == 0 ? 'normal'
+					: res == -99 ? 'low'
+					: res)
 			: res
 	},
 
