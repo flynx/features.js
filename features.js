@@ -924,6 +924,16 @@ var FeatureSetProto = {
 
 
 		//-------------------------------------------------------------
+
+		// remove exclusivity tags that were resolved...
+		var isMissing = function(f){
+			return !(
+				// feature is a resolvable exclusive tag...
+				(exclusive[f] || []).length > 0 
+				// feature was resolved...
+				&& exclusive[f]
+					.filter(function(f){ return list.indexOf(f) >= 0 })
+					.length > 0) }
 		
 		return {
 			input: lst,
@@ -940,8 +950,8 @@ var FeatureSetProto = {
 					|| missing.length > 0
 					|| missing_suggested.length > 0) ?
 				{
-					missing: missing,
-					missing_suggested: missing_suggested,
+					missing: missing.filter(isMissing),
+					missing_suggested: missing_suggested.filter(isMissing),
 					conflicts: conflicts,
 
 					// fatal stuff...
