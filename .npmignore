@@ -1,3 +1,4 @@
+.npm*
 *.vim
 *.sw[po]
 .git

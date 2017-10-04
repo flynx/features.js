@@ -337,7 +337,8 @@ var FeatureSetProto = {
 		features
 			.filter(function(f){ return !!that[f].exclusive })
 			.forEach(function(k){
-				(that[k].exclusive || [])
+				var e = that[k].exclusive
+				;((e instanceof Array ? e : [e]) || [])
 					.forEach(function(e){
 						// skip tags not explicitly requested...
 						if(tag != '*' && tag.indexOf(e) < 0){
