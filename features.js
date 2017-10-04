@@ -324,7 +324,7 @@ var FeatureSetProto = {
 	// 		...
 	// 	}
 	//
-	getExclusive: function(tag, features, rev_exclusive){
+	getExclusive: function(tag, features, rev_exclusive, isDisabled){
 		tag = tag == null || tag == '*' ? '*'
 			: tag instanceof Array ? tag
 			: [tag]
@@ -335,7 +335,9 @@ var FeatureSetProto = {
 		var that = this
 		var exclusive = {}
 		features
-			.filter(function(f){ return !!that[f].exclusive })
+			.filter(function(f){ 
+				return !!that[f].exclusive 
+					&& (!isDisabled || !isDisabled(f)) })
 			.forEach(function(k){
 				var e = that[k].exclusive
 				;((e instanceof Array ? e : [e]) || [])
@@ -460,10 +462,18 @@ var FeatureSetProto = {
 	//
 	// XXX should exclusive conflicts resolve to first (current state)
 	//		feature or last in an exclusive group???
-	buildFeatureList: function(lst, filter){
+	// XXX PROBLEM: exclusive feature trees should be resolved accounting 
+	// 		feature applicablility...
+	// 		...in this approach it is impossible...
+	// 		...one way to fix this is to make this interactively check 
+	// 		applicability, i.e. pass a context and check applicablility 
+	// 		when needed...
+	buildFeatureList: function(lst, isDisabled){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? all : lst
 		lst = lst.constructor !== Array ? [lst] : lst
+
+		//isDisabled = isDisabled || function(){ return false }
 
 		var that = this
 
@@ -684,14 +694,12 @@ var FeatureSetProto = {
 		// user filter...
 		// NOTE: we build this out of the full feature list...
 		disabled = disabled
-			.concat(filter ?
-				all.filter(function(n){ return !filter.call(that, n) })
-				: [])
+			.concat(isDisabled ? all.filter(isDisabled) : [])
 
 		// build exclusive groups...
 		// XXX need to sort the values to the same order as given features...
 		var rev_exclusive = {}
-		var exclusive = this.getExclusive('*', all, rev_exclusive)
+		var exclusive = this.getExclusive('*', all, rev_exclusive, isDisabled)
 
 
 		//-------------------------------- Stage 1: expand features ---
@@ -997,15 +1005,15 @@ var FeatureSetProto = {
 
 		var unapplicable = []
 		var features = this.buildFeatureList(lst, 
-			function(n){
+			(function(n){
 				var f = this[n]
 				// check applicability if possible...
 				if(f && f.isApplicable && !f.isApplicable.call(this, obj)){
 					unapplicable.push(n)
-					return false
+					return true
 				}
-				return true
-			}) 
+				return false
+			}).bind(this)) 
 		features.unapplicable = unapplicable 
 		// cleanup disabled -- filter out unapplicable and excluded features...
 		// NOTE: this is done mainly for cleaner and simpler reporting 
