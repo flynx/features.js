@@ -1016,6 +1016,10 @@ var FeatureSetProto = {
 		var unapplicable = []
 		var features = this.buildFeatureList(lst, 
 			(function(n){
+				// if we already tested unapplicable, no need to test again...
+				if(unapplicable.indexOf(n) >= 0){
+					return true
+				}
 				var f = this[n]
 				// check applicability if possible...
 				if(f && f.isApplicable && !f.isApplicable.call(this, obj)){
