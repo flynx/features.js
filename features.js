@@ -710,6 +710,7 @@ var FeatureSetProto = {
 		// Handle exclusive feature groups and aliases...
 		var conflicts = {}
 		var done = []
+		var aliases = []
 		Object.keys(features)
 			.forEach(function(f){
 				// alias...
@@ -732,8 +733,10 @@ var FeatureSetProto = {
 					// remove the alias...
 					// NOTE: exclusive tag can match a feature tag, thus
 					// 		we do not want to delete such tags...
+					// NOTE: we are not removing aliases here as they may
+					// 		get added/expanded back in by other features...
 					if(!(f in that)){
-						delete features[f]
+						aliases.push(f)
 					}
 					// replace dependencies...
 					Object.keys(features)
@@ -757,6 +760,11 @@ var FeatureSetProto = {
 						conflicts[group] = candidates
 					}
 				}
+			})
+		// XXX remove exclusive aliases...
+		aliases
+			.forEach(function(f){
+				delete features[f]
 			})
 		// resolve any exclusivity conflicts found...
 		var excluded = []
