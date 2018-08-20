@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/flynx/features.js#readme",
   "dependencies": {
-    "ig-actions": "^3.2.5",
-    "ig-object": "^1.0.0"
+    "ig-actions": "^3.19.3",
+    "ig-object": "^1.0.6"
   }
 }
