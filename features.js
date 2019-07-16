@@ -1135,7 +1135,7 @@ var FeatureSetProto = {
 
 
 var FeatureSet =
-module.FeatureSet = object.makeConstructor('FeatureSet', FeatureSetProto)
+module.FeatureSet = object.Constructor('FeatureSet', FeatureSetProto)
 
 
 //---------------------------------------------------------------------
