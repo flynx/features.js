@@ -14,12 +14,6 @@ var actions = module.actions = require('ig-actions')
 
 /*********************************************************************/
 
-var args2array = function(a){ return [].slice.call(a) } 
-
-
-
-/*********************************************************************/
-
 var FeatureLinearizationError =
 module.FeatureLinearizationError = 
 function(data){
@@ -1130,7 +1124,7 @@ var FeatureSetProto = {
 
 	// shorthand for: Feature(<feature-set>, ...)
 	Feature: function(){
-		return this.__feature__.apply(null, [this].concat(args2array(arguments))) },
+		return this.__feature__.apply(null, [this].concat([...arguments])) },
 }
 
 
