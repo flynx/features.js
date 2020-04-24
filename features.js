@@ -30,6 +30,26 @@ FeatureLinearizationError.prototype.constructor = FeatureLinearizationError
 
 
 //---------------------------------------------------------------------
+// Base feature...
+//
+// 	Feature(obj)
+// 		-> feature
+//
+// 	Feature(feature-set, obj)
+// 		-> feature
+//
+// 	Feature(tag, obj)
+// 		-> feature
+//
+// 	Feature(tag, suggested)
+// 		-> feature
+//
+// 	Feature(tag, actions)
+// 		-> feature
+//
+// 	Feature(feature-set, tag, actions)
+// 		-> feature
+//
 //
 // Feature attributes:
 // 	.tag			- feature tag (string)
@@ -87,16 +107,30 @@ FeatureLinearizationError.prototype.constructor = FeatureLinearizationError
 // 	considered on setup...
 //
 //
-// XXX this could install the handlers in two locations:
-// 		- mixin if available...
-// 		- base object (currently implemented)
-// 		should the first be done?
-var FeatureProto =
-module.FeatureProto = {
+var Feature =
+module.Feature =
+object.Constructor('Feature', {
+	//__featureset__: Features,
+	__featureset__: null,
+
+	// Attributes...
 	tag: null,
+
+	//title: null,
+	//doc: null,
+	//priority: null,
+	//exclusive: null,
+	//suggested: null,
+	//depends: null,
+	//actions: null,
+	//config: null,
+	//handlers: null,
+
 
 	isApplicable: function(actions){ return true },
 
+
+	// API...
 	getPriority: function(human_readable){
 		var res = this.priority || 0
 		res = res == 'high' ? 99
@@ -109,9 +143,12 @@ module.FeatureProto = {
 					: res == 0 ? 'normal'
 					: res == -99 ? 'low'
 					: res)
-			: res
-	},
+			: res },
 
+	// XXX this could install the handlers in two locations:
+	// 		- mixin if available...
+	// 		- base object (currently implemented)
+	// 		should the first be done?
 	setup: function(actions){
 		var that = this
 
@@ -156,7 +193,7 @@ module.FeatureProto = {
 
 		// custom setup...
 		// XXX is this the correct way???
-		if(this.hasOwnProperty('setup') && this.setup !== FeatureProto.setup){
+		if(this.hasOwnProperty('setup') && this.setup !== Feature.prototype.setup){
 			this.setup(actions)
 		}
 
@@ -178,7 +215,7 @@ module.FeatureProto = {
 		}
 
 		// XXX
-		if(this.hasOwnProperty('remove') && this.setup !== FeatureProto.remove){
+		if(this.hasOwnProperty('remove') && this.setup !== Feature.prototype.remove){
 			this.remove(actions)
 		}
 
@@ -188,101 +225,92 @@ module.FeatureProto = {
 
 		return this
 	},
-}
 
 
-//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// XXX is hard-coded default feature-set a good way to go???
-//
-// 	Feature(obj)
-// 		-> feature
-//
-// 	Feature(feature-set, obj)
-// 		-> feature
-//
-// 	Feature(tag, obj)
-// 		-> feature
-//
-// 	Feature(tag, suggested)
-// 		-> feature
-//
-// 	Feature(tag, actions)
-// 		-> feature
-//
-// 	Feature(feature-set, tag, actions)
-// 		-> feature
-//
-var Feature =
-module.Feature =
-function Feature(feature_set, tag, obj){
-	if(arguments.length == 2){
-		// Feature(<tag>, <obj>)
-		if(typeof(feature_set) == typeof('str')){
-			obj = tag
-			tag = feature_set
-			feature_set = Features
+	// XXX EXPERIMENTAL: if called from a feature-set this will add self
+	// 		to that feature-set...
+	// XXX do we need this to be .__new__(..) and not .__init__(..)
+	__new__: function(context, feature_set, tag, obj){
+		// NOTE: we need to account for context here -- inc length...
+		if(arguments.length == 3){
+			// Feature(<tag>, <obj>)
+			if(typeof(feature_set) == typeof('str')){
+				obj = tag
+				tag = feature_set
+				//feature_set = Features
+				// XXX EXPERIMENTAL...
+				feature_set = context instanceof FeatureSet ?
+					context
+					: (this.__featureset__ || Features)
 
-		// Feature(<feature-set>, <obj>)
-		} else {
-			obj = tag
-			tag = null
+			// Feature(<feature-set>, <obj>)
+			} else {
+				obj = tag
+				tag = null
+			}
+
+		// Feature(<obj>)
+		// NOTE: we need to account for context here -- inc length...
+		} else if(arguments.length == 2){
+			obj = feature_set
+			//feature_set = Features
+			// XXX EXPERIMENTAL...
+			feature_set = context instanceof FeatureSet ?
+				context
+				: (this.__featureset__ || Features)
 		}
 
-	// Feature(<obj>)
-	} else if(arguments.length == 1){
-		obj = feature_set
-		feature_set = Features
-	}
+		if(tag != null && obj.tag != null && obj.tag != tag){
+			throw 'Error: tag and obj.tag mismatch, either use one or both must match.' }
 
-	if(tag != null && obj.tag != null && obj.tag != tag){
-		throw 'Error: tag and obj.tag mismatch, either use one or both must match.'
-	}
+		// action...
+		if(obj instanceof actions.Action){
+			if(tag == null){
+				throw 'Error: need a tag to make a feature out of an action' }
+			var f = {
+				tag: tag,
+				actions: obj,
+			}
+			obj = f
 
-	// action...
-	if(obj instanceof actions.Action){
-		if(tag == null){
-			throw 'Error: need a tag to make a feature out of an action'
+		// meta-feature...
+		} else if(obj.constructor === Array){
+			if(tag == null){
+				throw 'Error: need a tag to make a meta-feature'
+			}
+			var f = {
+				tag: tag,
+				suggested: obj,
+			}
+			obj = f
 		}
-		var f = {
-			tag: tag,
-			actions: obj,
+
+		// feature-set...
+		if(feature_set){
+			feature_set[obj.tag] = obj
 		}
-		obj = f
 
-	// meta-feature...
-	} else if(obj.constructor === Array){
-		if(tag == null){
-			throw 'Error: need a tag to make a meta-feature'
-		}
-		var f = {
-			tag: tag,
-			suggested: obj,
-		}
-		obj = f
-
-	// feature...
-	} else {
-		obj.__proto__ = FeatureProto
-	}
-
-	if(feature_set){
-		feature_set[obj.tag] = obj
-	}
-
-	return obj
-}
-Feature.prototype = FeatureProto
-Feature.prototype.constructor = Feature
+		return obj
+	},
+})
 
 
-//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-var FeatureSetProto = {
-	__feature__: Feature,
-	__actions__: actions.Actions,
+//---------------------------------------------------------------------
 
+var FeatureSet =
+module.FeatureSet = 
+object.Constructor('FeatureSet', {
 	// if true, .setup(..) will report things it's doing... 
 	__verbose__: null,
+
+
+	__actions__: actions.Actions,
+
+	// NOTE: a feature is expected to write a reference to itself to the 
+	// 		feature-set (context)...
+	Feature: Feature,
+
 
 	// List of registered features...
 	get features(){
@@ -1068,7 +1096,7 @@ var FeatureSetProto = {
 
 		// do the setup...
 		var that = this
-		var setup = FeatureProto.setup
+		var setup = Feature.prototype.setup
 		features.features.forEach(function(n){
 			// setup...
 			if(that[n] != null){
@@ -1122,17 +1150,13 @@ var FeatureSetProto = {
 		return graph
 	},
 
-	// shorthand for: Feature(<feature-set>, ...)
-	Feature: function(){
-		return this.__feature__.apply(null, [this].concat([...arguments])) },
-}
+})
 
 
-var FeatureSet =
-module.FeatureSet = object.Constructor('FeatureSet', FeatureSetProto)
 
 
-//---------------------------------------------------------------------
+/*********************************************************************/
+// default feature set...
 
 var Features =
 module.Features = new FeatureSet()
