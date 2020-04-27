@@ -318,8 +318,7 @@ object.Constructor('FeatureSet', {
 		return Object.keys(this)
 			.filter(function(e){ 
 				return e != 'features' 
-					&& that[e] instanceof Feature }) 
-	},
+					&& that[e] instanceof Feature }) },
 
 	// build exclusive groups...
 	//
@@ -1120,10 +1119,7 @@ object.Constructor('FeatureSet', {
 		lst.forEach(function(n){
 			if(that[n] != null){
 				console.log('Removing feature:', n)
-				that[n].remove(obj)
-			}
-		})
-	},
+				that[n].remove(obj) } }) },
 
 
 	// Generate a Graphviz graph from features...
@@ -1149,7 +1145,6 @@ object.Constructor('FeatureSet', {
 
 		return graph
 	},
-
 })
 
 
