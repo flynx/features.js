@@ -14,18 +14,17 @@ var actions = module.actions = require('ig-actions')
 
 /*********************************************************************/
 
-var FeatureLinearizationError =
+// XXX use object.Error as base when ready...
+var FeatureLinearizationError
 module.FeatureLinearizationError = 
-function(data){
-	this.data = data
-	this.message = 'Failed to linearise.'
-	this.toString = function(){
-		return this.message
-	}
-}
-FeatureLinearizationError.prototype = Object.create(new Error)
-FeatureLinearizationError.prototype.constructor = FeatureLinearizationError
-
+object.Constructor('FeatureLinearizationError', Error, {
+	get name(){
+		return this.constructor.name },
+	toString: function(){
+		return 'Failed to linearise' },
+	__init__: function(data){
+		this.data = data },
+})
 
 
 
@@ -156,15 +155,12 @@ object.Constructor('Feature', {
 		if(this.actions != null){
 			this.tag ? 
 				actions.mixin(this.actions, {source_tag: this.tag}) 
-				: actions.mixin(this.actions) 
-		}
+				: actions.mixin(this.actions) }
 
 		// install handlers...
 		if(this.handlers != null){
 			this.handlers.forEach(function(h){
-				actions.on(h[0], that.tag, h[1])
-			})
-		}
+				actions.on(h[0], that.tag, h[1]) }) }
 
 		// merge config...
 		// NOTE: this will merge the actual config in .config.__proto__
@@ -173,32 +169,29 @@ object.Constructor('Feature', {
 				|| (this.actions != null 
 					&& this.actions.config != null)){
 			// sanity check -- warn of config shadowing...
+			// XXX make this optional...
 			if(this.config && this.actions && this.actions.config){
 				console.warn('Feature config shadowed: '
 					+'both .config (used) and .actions.config (ignored) are defined for:', 
 					this.tag, 
-					this)
-			}
+					this) }
 
 			var config = this.config = this.config || this.actions.config
 
 			if(actions.config == null){
-				actions.config = Object.create({})
-			}
-			Object.keys(config).forEach(function(n){
-				// NOTE: this will overwrite existing values...
-				actions.config.__proto__[n] = config[n]
-			})
-		}
+				actions.config = Object.create({}) }
+			Object.keys(config)
+				.forEach(function(n){
+					// NOTE: this will overwrite existing values...
+					actions.config.__proto__[n] = config[n] }) }
 
 		// custom setup...
 		// XXX is this the correct way???
-		if(this.hasOwnProperty('setup') && this.setup !== Feature.prototype.setup){
-			this.setup(actions)
-		}
+		this.hasOwnProperty('setup') 
+			&& this.setup !== Feature.prototype.setup
+			&& this.setup(actions)
 
-		return this
-	},
+		return this },
 
 	// XXX need to revise this...
 	// 		- .mixout(..) is available directly from the object while 
@@ -206,25 +199,22 @@ object.Constructor('Feature', {
 	// 		- might be a good idea to add a specific lifecycle actions to
 	// 			enable feautures to handle their removal correctly... 
 	remove: function(actions){
-		if(this.actions != null){
-			actions.mixout(this.tag || this.actions)
-		}
+		this.actions != null
+			&& actions.mixout(this.tag || this.actions)
 
-		if(this.handlers != null){
-			actions.off('*', this.tag)
-		}
+		this.handlers != null
+			&& actions.off('*', this.tag)
 
 		// XXX
-		if(this.hasOwnProperty('remove') && this.setup !== Feature.prototype.remove){
-			this.remove(actions)
-		}
+		this.hasOwnProperty('remove') 
+			&& this.setup !== Feature.prototype.remove
+			&& this.remove(actions)
 
 		// remove feature DOM elements...
 		// XXX
 		actions.ribbons.viewer.find('.' + this.tag).remove()
 
-		return this
-	},
+		return this },
 
 
 	// XXX EXPERIMENTAL: if called from a feature-set this will add self
@@ -246,8 +236,7 @@ object.Constructor('Feature', {
 			// Feature(<feature-set>, <obj>)
 			} else {
 				obj = tag
-				tag = null
-			}
+				tag = null }
 
 		// Feature(<obj>)
 		// NOTE: we need to account for context here -- inc length...
@@ -257,16 +246,15 @@ object.Constructor('Feature', {
 			// XXX EXPERIMENTAL...
 			feature_set = context instanceof FeatureSet ?
 				context
-				: (this.__featureset__ || Features)
-		}
+				: (this.__featureset__ || Features) }
 
 		if(tag != null && obj.tag != null && obj.tag != tag){
-			throw 'Error: tag and obj.tag mismatch, either use one or both must match.' }
+			throw new Error('tag and obj.tag mismatch, either use one or both must match.') }
 
 		// action...
 		if(obj instanceof actions.Action){
 			if(tag == null){
-				throw 'Error: need a tag to make a feature out of an action' }
+				throw new Error('need a tag to make a feature out of an action') }
 			var f = {
 				tag: tag,
 				actions: obj,
@@ -276,22 +264,18 @@ object.Constructor('Feature', {
 		// meta-feature...
 		} else if(obj.constructor === Array){
 			if(tag == null){
-				throw 'Error: need a tag to make a meta-feature'
-			}
+				throw new Error('need a tag to make a meta-feature') }
 			var f = {
 				tag: tag,
 				suggested: obj,
 			}
-			obj = f
-		}
+			obj = f }
 
 		// feature-set...
 		if(feature_set){
-			feature_set[obj.tag] = obj
-		}
+			feature_set[obj.tag] = obj }
 
-		return obj
-	},
+		return obj },
 })
 
 
@@ -369,8 +353,7 @@ object.Constructor('FeatureSet', {
 						}
 						exclusive[e] = (exclusive[e] || []).concat([k]) 
 						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
-		return exclusive
-	},
+		return exclusive },
 
 	// Build list of features in load order...
 	//
@@ -491,8 +474,12 @@ object.Constructor('FeatureSet', {
 	// 		when needed...
 	buildFeatureList: function(lst, isDisabled){
 		var all = this.features
-		lst = (lst == null || lst == '*') ? all : lst
-		lst = lst.constructor !== Array ? [lst] : lst
+		lst = (lst == null || lst == '*') ? 
+			all 
+			: lst
+		lst = lst instanceof Array ? 
+			[lst] 
+			: lst
 
 		//isDisabled = isDisabled || function(){ return false }
 
@@ -519,8 +506,7 @@ object.Constructor('FeatureSet', {
 							// NOTE: Infinity - Infinity is NaN, so we need 
 							// 		to guard against it...
 							return i - j || 0 })
-						.map(function(e){ return e[0] }) })
-		}
+						.map(function(e){ return e[0] }) }) }
 
 		// Expand feature references (recursive)...
 		//
@@ -546,22 +532,17 @@ object.Constructor('FeatureSet', {
 								console.warn(`Disable loop detected at "${n}" in chain: ${_seen}`)
 								var loop = _seen.slice(_seen.indexOf(n)).concat([n])
 								data.disable_loops = (data.disable_loops || []).push(loop)
-								return false
-							}
+								return false }
 							// XXX STUB -- need to resolve actual loops and 
 							// 		make the disable global...
 							if(n in store){
-								console.warn('Disabling a feature after it is loaded:', n, _seen)
-							}
+								console.warn('Disabling a feature after it is loaded:', n, _seen) }
 							data.disabled.push(n)
-							return false
-						}
+							return false }
 						// skip already disabled features...
 						if(data.disabled.indexOf(n) >= 0){
-							return false
-						}
-						return true
-					})
+							return false }
+						return true })
 				: lst
 
 			// traverse the tree...
@@ -572,19 +553,15 @@ object.Constructor('FeatureSet', {
 					// exclusive tags...
 					if(f == null && data.exclusive && n in data.exclusive){
 						store[n] = null
-						return false
-					}
+						return false }
 					// feature not defined or is not a feature...
 					if(f == null){
 						data.missing 
 							&& data.missing.indexOf(n) < 0
 							&& data.missing.push(n)
-						return false
-					}
-					return n
-				})
+						return false }
+					return n })
 				.filter(function(e){ return e })
-
 				// traverse down...
 				.forEach(function(f){
 					// dependency loop detection...
@@ -592,13 +569,11 @@ object.Constructor('FeatureSet', {
 						var loop = _seen.slice(_seen.indexOf(f)).concat([f])
 						data.loops 
 							&& data.loops.push(loop)
-						return
-					}
+						return }
 
 					// skip already done features...
 					if(f in store){
-						return
-					}
+						return }
 
 					//var feature = store[f] = that[f]
 					var feature = that[f]
@@ -613,12 +588,9 @@ object.Constructor('FeatureSet', {
 						store[f] = _lst 
 
 						// traverse down...
-						expand(target, _lst, store, data, _seen.concat([f]))
-					}
-				})
+						expand(target, _lst, store, data, _seen.concat([f])) } })
 
-			return store
-		}
+			return store }
 
 		// Expand feature dependencies and suggestions recursively...
 		//
@@ -692,14 +664,11 @@ object.Constructor('FeatureSet', {
 					// mix suggested into features...
 					} else {
 						features[f] = s[f]
-						suggested[f] = (s[f] || []).slice()
-					}
-				})
+						suggested[f] = (s[f] || []).slice() } })
 
 			sortExclusive(features)
 
-			return features
-		}
+			return features }
 
 
 		//--------------------- Globals: filtering / exclusive tags ---
@@ -748,8 +717,7 @@ object.Constructor('FeatureSet', {
 
 					// link alias to existing feature...
 					} else {
-						var target = candidates[0]
-					}
+						var target = candidates[0] }
 
 					// remove the alias...
 					// NOTE: exclusive tag can match a feature tag, thus
@@ -766,8 +734,7 @@ object.Constructor('FeatureSet', {
 								&& features[e].splice(i, 1, target)
 						})
 					f = target
-					done.push(f)
-				}
+					done.push(f) }
 				
 				// exclusive feature...
 				if(f in rev_exclusive){
@@ -777,10 +744,7 @@ object.Constructor('FeatureSet', {
 						.filter(function(c){ return c in features })
 
 					if(!(group in conflicts) && candidates.length > 1){
-						conflicts[group] = candidates
-					}
-				}
-			})
+						conflicts[group] = candidates } } })
 		// cleanup...
 		to_remove.forEach(function(f){ delete features[f] })
 		// resolve any exclusivity conflicts found...
@@ -818,9 +782,7 @@ object.Constructor('FeatureSet', {
 									&& features[f].indexOf(d) >= 0
 									&& disabled.indexOf(f) < 0){
 								expanded_disabled = true
-								disabled.push(f)
-							}
-						})
+								disabled.push(f) } })
 
 					// delete the feature itself...
 					var s = suggests[d] || []
@@ -838,10 +800,7 @@ object.Constructor('FeatureSet', {
 											.filter(n => n.indexOf(f) >= 0)
 											.length == 0){
 								expanded_disabled = true
-								disabled.push(f)
-							}
-						})
-				})
+								disabled.push(f) } }) })
 		} while(expanded_disabled)
 
 		// remove orphaned features...
@@ -858,8 +817,7 @@ object.Constructor('FeatureSet', {
 			.forEach(function(f){
 				console.log('ORPHANED:', f)
 				disabled.push(f)
-				delete features[f]
-			})
+				delete features[f] })
 
 
 		//---------------------------------- Stage 2: sort features ---
@@ -872,8 +830,7 @@ object.Constructor('FeatureSet', {
 		var expanddeps = function(lst, cur, seen){
 			seen = seen || []
 			if(features[cur] == null){
-				return
-			}
+				return }
 			// expand the dep list recursively...
 			// NOTE: this will expand features[cur] in-place while 
 			// 		iterating over it...
@@ -886,11 +843,7 @@ object.Constructor('FeatureSet', {
 
 					features[cur].forEach(function(e){
 						lst.indexOf(e) < 0
-							&& lst.push(e)
-					})
-				}
-			}
-		}
+							&& lst.push(e) }) } } }
 		// do the actual expansion...
 		var list = Object.keys(features)
 		list.forEach(function(f){ expanddeps(list, f) })
@@ -921,8 +874,7 @@ object.Constructor('FeatureSet', {
 		do {
 			var moves = 0
 			if(list.length == 0){
-				break
-			}
+				break }
 			list
 				.slice()
 				.forEach(function(e){
@@ -941,9 +893,7 @@ object.Constructor('FeatureSet', {
 						// place after last dependency...
 						list.splice(to[1]+1, 0, e)
 						list.splice(from, 1)
-						moves++
-					}
-				})
+						moves++ } })
 			loop_limit--
 		} while(moves > 0 && loop_limit > 0)
 
@@ -1033,8 +983,7 @@ object.Constructor('FeatureSet', {
 		// no explicit object is given...
 		if(lst == null){
 			lst = obj
-			obj = null
-		}
+			obj = null }
 		obj = obj || (this.__actions__ || actions.Actions)()
 		lst = lst instanceof Array ? lst : [lst]
 
@@ -1043,16 +992,13 @@ object.Constructor('FeatureSet', {
 			(function(n){
 				// if we already tested unapplicable, no need to test again...
 				if(unapplicable.indexOf(n) >= 0){
-					return true
-				}
+					return true }
 				var f = this[n]
 				// check applicability if possible...
 				if(f && f.isApplicable && !f.isApplicable.call(this, obj)){
 					unapplicable.push(n)
-					return true
-				}
-				return false
-			}).bind(this)) 
+					return true }
+				return false }).bind(this)) 
 		features.unapplicable = unapplicable 
 		// cleanup disabled -- filter out unapplicable and excluded features...
 		// NOTE: this is done mainly for cleaner and simpler reporting 
@@ -1081,8 +1027,7 @@ object.Constructor('FeatureSet', {
 					console.error('Exclusive "'+ group +'" conflict at:', error.conflicts[group]) })
 			// report loop limit...
 			error.sort_loop_overflow
-				&& console.error('Hit loop limit while sorting dependencies!')
-		}
+				&& console.error('Hit loop limit while sorting dependencies!') }
 
 		features.FeatureSet = this
 
@@ -1090,8 +1035,7 @@ object.Constructor('FeatureSet', {
 
 		// fatal error -- can't load...
 		if(fatal){
-			throw new FeatureLinearizationError(features)
-		}
+			throw new FeatureLinearizationError(features) }
 
 		// do the setup...
 		var that = this
@@ -1100,12 +1044,9 @@ object.Constructor('FeatureSet', {
 			// setup...
 			if(that[n] != null){
 				this.__verbose__ && console.log('Setting up feature:', n)
-				setup.call(that[n], obj)
-			}
-		})
+				setup.call(that[n], obj) } })
 
-		return obj
-	},
+		return obj },
 
 	// XXX revise...
 	// 		...the main problem here is that .mixout(..) is accesible 
@@ -1143,8 +1084,7 @@ object.Constructor('FeatureSet', {
 			})
 		graph += '}'
 
-		return graph
-	},
+		return graph },
 })
 
 

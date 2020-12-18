@@ -1,6 +1,6 @@
 {
   "name": "ig-features",
-  "version": "3.4.2",
+  "version": "3.4.3",
   "description": "",
   "main": "features.js",
   "scripts": {
@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/flynx/features.js#readme",
   "dependencies": {
-    "ig-actions": "^3.24.11",
-    "ig-object": "^5.0.2"
+    "ig-actions": "^3.24.13",
+    "ig-object": "^5.4.11"
   }
 }
