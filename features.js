@@ -144,26 +144,36 @@ object.Constructor('Feature', {
 					: res)
 			: res },
 
-	// XXX this could install the handlers in two locations:
+	// XXX HANDLERS this could install the handlers in two locations:
+	// 		- the actions object...
 	// 		- mixin if available...
 	// 		- base object (currently implemented)
-	// 		should the first be done?
-	// 		...the andlers should theoreticly be stored neither in the 
+	// 		...the handlers should theoreticly be stored neither in the 
 	// 		instance nor in the mixin but rather in the action-set itself 
 	// 		on feature creation... (???)
+	// 		...feels like user handlers and feature handlers should be 
+	// 		isolated...
+	// 		XXX setting handlers on the .__proto__ breaks...
 	setup: function(actions){
 		var that = this
 
 		// mixin actions...
+		// NOTE: this will only mixin functions and actions...
 		if(this.actions != null){
 			this.tag ? 
 				actions.mixin(this.actions, {source_tag: this.tag}) 
-				: actions.mixin(this.actions) }
+				: actions.mixin(this.actions) 
+			// XXX HANDLERS here we will also need to copy this.actions.__action_handlers into the mixin...
+			//this.actions.__action_handlers
+			//	&& actions.__proto__.__action_handlers = this.actions.__action_handlers
+		}
 
 		// install handlers...
 		if(this.handlers != null){
-			this.handlers.forEach(function(h){
-				actions.on(h[0], that.tag, h[1]) }) }
+			this.handlers.forEach(function([a, h]){
+				// XXX HANDLERS this breaks into recursion...
+				//actions.__proto__.on(a, that.tag, h) }) }
+				actions.on(a, that.tag, h) }) }
 
 		// merge config...
 		// NOTE: this will merge the actual config in .config.__proto__
@@ -205,6 +215,7 @@ object.Constructor('Feature', {
 		this.actions != null
 			&& actions.mixout(this.tag || this.actions)
 
+		// XXX HANDLERS do we need this if .handlers if local to action...
 		this.handlers != null
 			&& actions.off('*', this.tag)
 
@@ -259,7 +270,6 @@ object.Constructor('Feature', {
 			if(tag == null){
 				throw new Error('need a tag to make a feature out of an action') }
 			obj = {
-
 				tag: tag,
 				actions: obj,
 			}
@@ -272,6 +282,17 @@ object.Constructor('Feature', {
 				tag: tag,
 				suggested: obj,
 			} }
+
+		/*/ XXX HANDLERS setup .handlers...
+		if(obj.handlers && obj.actions){
+			// NOTE: obj.actions does not have to be an action so w cheat \
+			// 		a bit here, then copy the mindings...
+			var tmp = Object.create(actions.MetaActions)
+			obj.handlers
+				.forEach(function([a, h]){
+					tmp.on(a, obj.tag, h) }) 
+			Object.assign(obj.actions, tmp) }
+		//*/
 
 		// feature-set...
 		if(feature_set){
