@@ -11,7 +11,6 @@ var object = require('ig-object')
 var actions = module.actions = require('ig-actions')
 
 
-
 /*********************************************************************/
 
 // XXX use object.Error as base when ready...
@@ -161,19 +160,19 @@ object.Constructor('Feature', {
 		// NOTE: this will only mixin functions and actions...
 		if(this.actions != null){
 			this.tag ? 
-				actions.mixin(this.actions, {source_tag: this.tag}) 
-				: actions.mixin(this.actions) 
-			// XXX HANDLERS here we will also need to copy this.actions.__action_handlers into the mixin...
-			//this.actions.__action_handlers
-			//	&& actions.__proto__.__action_handlers = this.actions.__action_handlers
-		}
+				// XXX HANDLERS
+				actions.mixin(this.actions, {source_tag: this.tag, action_handlers: true}) 
+				: actions.mixin(this.actions, {action_handlers: true}) }
+				//actions.mixin(this.actions, {source_tag: this.tag}) 
+				//: actions.mixin(this.actions) }
 
+		/*/ XXX HANDLERS this is not needed if handlers are local to actions...
 		// install handlers...
 		if(this.handlers != null){
 			this.handlers.forEach(function([a, h]){
-				// XXX HANDLERS this breaks into recursion...
 				//actions.__proto__.on(a, that.tag, h) }) }
 				actions.on(a, that.tag, h) }) }
+		//*/
 
 		// merge config...
 		// NOTE: this will merge the actual config in .config.__proto__
@@ -215,9 +214,10 @@ object.Constructor('Feature', {
 		this.actions != null
 			&& actions.mixout(this.tag || this.actions)
 
-		// XXX HANDLERS do we need this if .handlers if local to action...
+		/*/ XXX HANDLERS do we need this if .handlers if local to action...
 		this.handlers != null
 			&& actions.off('*', this.tag)
+		//*/
 
 		// XXX
 		this.hasOwnProperty('remove') 
@@ -283,8 +283,9 @@ object.Constructor('Feature', {
 				suggested: obj,
 			} }
 
-		/*/ XXX HANDLERS setup .handlers...
-		if(obj.handlers && obj.actions){
+		// XXX HANDLERS setup .handlers...
+		if(obj.handlers){
+			obj.actions = obj.actions || {}
 			// NOTE: obj.actions does not have to be an action so w cheat \
 			// 		a bit here, then copy the mindings...
 			var tmp = Object.create(actions.MetaActions)
@@ -292,7 +293,6 @@ object.Constructor('Feature', {
 				.forEach(function([a, h]){
 					tmp.on(a, obj.tag, h) }) 
 			Object.assign(obj.actions, tmp) }
-		//*/
 
 		// feature-set...
 		if(feature_set){
