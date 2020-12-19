@@ -148,6 +148,9 @@ object.Constructor('Feature', {
 	// 		- mixin if available...
 	// 		- base object (currently implemented)
 	// 		should the first be done?
+	// 		...the andlers should theoreticly be stored neither in the 
+	// 		instance nor in the mixin but rather in the action-set itself 
+	// 		on feature creation... (???)
 	setup: function(actions){
 		var that = this
 
@@ -251,25 +254,24 @@ object.Constructor('Feature', {
 		if(tag != null && obj.tag != null && obj.tag != tag){
 			throw new Error('tag and obj.tag mismatch, either use one or both must match.') }
 
-		// action...
+		// actions...
 		if(obj instanceof actions.Action){
 			if(tag == null){
 				throw new Error('need a tag to make a feature out of an action') }
-			var f = {
+			obj = {
+
 				tag: tag,
 				actions: obj,
 			}
-			obj = f
 
 		// meta-feature...
 		} else if(obj.constructor === Array){
 			if(tag == null){
 				throw new Error('need a tag to make a meta-feature') }
-			var f = {
+			obj = {
 				tag: tag,
 				suggested: obj,
-			}
-			obj = f }
+			} }
 
 		// feature-set...
 		if(feature_set){
@@ -478,8 +480,8 @@ object.Constructor('FeatureSet', {
 			all 
 			: lst
 		lst = lst instanceof Array ? 
-			[lst] 
-			: lst
+			lst
+			: [lst] 
 
 		//isDisabled = isDisabled || function(){ return false }
 
