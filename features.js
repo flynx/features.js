@@ -227,14 +227,10 @@ object.Constructor('Feature', {
 			&& actions.off('*', this.tag)
 		//*/
 
-		// XXX
+		// XXX revise naming...
 		this.hasOwnProperty('remove') 
 			&& this.setup !== Feature.prototype.remove
 			&& this.remove(actions)
-
-		// remove feature DOM elements...
-		// XXX
-		actions.ribbons.viewer.find('.' + this.tag).remove()
 
 		return this },
 
