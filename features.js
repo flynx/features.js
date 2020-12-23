@@ -111,6 +111,13 @@ object.Constructor('Feature', {
 	//__featureset__: Features,
 	__featureset__: null,
 
+	__verbose: null,
+	get __verbose__(){
+		return this.__verbose == null 
+			&& (this.__featureset__ || {}).__verbose__ },
+	set __verbose__(value){
+		this.__verbose = value },
+
 	// Attributes...
 	tag: null,
 
@@ -181,8 +188,9 @@ object.Constructor('Feature', {
 				|| (this.actions != null 
 					&& this.actions.config != null)){
 			// sanity check -- warn of config shadowing...
-			// XXX make this optional...
-			if(this.config && this.actions && this.actions.config){
+			// XXX do we need this???
+			if(this.__verbose__ 
+					&& this.config && (this.actions || {}).config){
 				console.warn('Feature config shadowed: '
 					+'both .config (used) and .actions.config (ignored) are defined for:', 
 					this.tag, 
@@ -1060,13 +1068,20 @@ object.Constructor('FeatureSet', {
 		if(fatal){
 			throw new FeatureLinearizationError(features) }
 
+		// mixout everything...
+		this.remove(obj, 
+			obj.mro('tag')
+				.filter(function(e){ 
+					return !!e }))
+
 		// do the setup...
 		var that = this
 		var setup = Feature.prototype.setup
 		features.features.forEach(function(n){
 			// setup...
 			if(that[n] != null){
-				this.__verbose__ && console.log('Setting up feature:', n)
+				this.__verbose__ 
+					&& console.log('Setting up feature:', n)
 				setup.call(that[n], obj) } })
 
 		return obj },
@@ -1082,7 +1097,8 @@ object.Constructor('FeatureSet', {
 		var that = this
 		lst.forEach(function(n){
 			if(that[n] != null){
-				console.log('Removing feature:', n)
+				this.__verbose__ 
+					&& console.log('Removing feature:', n)
 				that[n].remove(obj) } }) },
 
 
