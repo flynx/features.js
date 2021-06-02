@@ -30,79 +30,79 @@ object.Constructor('FeatureLinearizationError', Error, {
 //---------------------------------------------------------------------
 // Base feature...
 //
-// 	Feature(obj)
-// 		-> feature
+//	Feature(obj)
+//		-> feature
 //
-// 	Feature(feature-set, obj)
-// 		-> feature
+//	Feature(feature-set, obj)
+//		-> feature
 //
-// 	Feature(tag, obj)
-// 		-> feature
+//	Feature(tag, obj)
+//		-> feature
 //
-// 	Feature(tag, suggested)
-// 		-> feature
+//	Feature(tag, suggested)
+//		-> feature
 //
-// 	Feature(tag, actions)
-// 		-> feature
+//	Feature(tag, actions)
+//		-> feature
 //
-// 	Feature(feature-set, tag, actions)
-// 		-> feature
+//	Feature(feature-set, tag, actions)
+//		-> feature
 //
 //
 // Feature attributes:
-// 	.tag			- feature tag (string)
-// 					  this is used to identify the feature, its event 
-// 					  handlers and DOM elements.
+//	.tag			- feature tag (string)
+//					  this is used to identify the feature, its event 
+//					  handlers and DOM elements.
 //
-// 	.title			- feature name (string | null)
-// 	.doc			- feature description (string | null)
+//	.title			- feature name (string | null)
+//	.doc			- feature description (string | null)
 //
-// 	.priority		- feature priority
-// 					  can be:
-// 					  	- 'high' (99) | 'medium' (0) | 'low' (-99)
-// 					  	- number
-// 					  	- null (0, default)
-// 					  features with higher priority will be setup first,
-// 					  features with the same priority will be run in 
-// 					  order of occurrence.
-// 	.suggested		- list of optional suggested features, these are not 
-// 					  required but setup if available.
-// 					  This is useful for defining meta features but 
-// 					  without making each sub-feature a strict dependency.
-// 	.depends		- feature dependencies -- tags of features that must 
-// 					  setup before the feature (list | null)
-// 					  NOTE: a feature can depend on an exclusive tag, 
-// 					  		this will remove the need to track which 
-// 					  		specific exclusive tagged feature is loaded...
-// 	.exclusive		- feature exclusivity tags (list | null)
-// 					  an exclusivity group enforces that only one feature
-// 					  in it will be run, i.e. the first / highest priority.
+//	.priority		- feature priority
+//					  can be:
+//						- 'high' (99) | 'medium' (0) | 'low' (-99)
+//						- number
+//						- null (0, default)
+//					  features with higher priority will be setup first,
+//					  features with the same priority will be run in 
+//					  order of occurrence.
+//	.suggested		- list of optional suggested features, these are not 
+//					  required but setup if available.
+//					  This is useful for defining meta features but 
+//					  without making each sub-feature a strict dependency.
+//	.depends		- feature dependencies -- tags of features that must 
+//					  setup before the feature (list | null)
+//					  NOTE: a feature can depend on an exclusive tag, 
+//							this will remove the need to track which 
+//							specific exclusive tagged feature is loaded...
+//	.exclusive		- feature exclusivity tags (list | null)
+//					  an exclusivity group enforces that only one feature
+//					  in it will be run, i.e. the first / highest priority.
 //
-// 	.actions		- action object containing feature actions (ActionSet | null)
-// 					  this will be mixed into the base object on .setup()
-// 					  and mixed out on .remove()
-// 	.config			- feature configuration, will be merged with base 
-// 					  object's .config
-// 					  NOTE: the final .config is an empty object with
-// 					  		.__proto__ set to the merged configuration
-// 					  		data...
-// 	.handlers		- feature event handlers (list | null)
+//	.actions		- action object containing feature actions (ActionSet | null)
+//					  this will be mixed into the base object on .setup()
+//					  and mixed out on .remove()
+//	.config			- feature configuration, will be merged with base 
+//					  object's .config
+//					  NOTE: the final .config is an empty object with
+//							.__proto__ set to the merged configuration
+//							data...
+//	.handlers		- feature event handlers (list | null)
 // 
 //
 //
 // .handlers format:
-// 	[
-// 		[ <event-spec>, <handler-function> ],
-// 		...
-// 	]
+//	[
+//		[ <event-spec>, <handler-function> ],
+//		...
+//	]
 //
 // NOTE: both <event-spec> and <handler-function> must be compatible with
-// 		Action.on(..)
+//		Action.on(..)
 //
 //
 // Feature applicability:
-// 	If feature.isApplicable(..) returns false then the feature will not be
-// 	considered on setup...
+//	If feature.isApplicable(..) returns false then the feature will not be
+//	considered on setup...
 //
 //
 var Feature =
@@ -151,15 +151,15 @@ object.Constructor('Feature', {
 			: res },
 
 	// XXX HANDLERS this could install the handlers in two locations:
-	// 		- the actions object...
-	// 		- mixin if available...
-	// 		- base object (currently implemented)
-	// 		...the handlers should theoreticly be stored neither in the 
-	// 		instance nor in the mixin but rather in the action-set itself 
-	// 		on feature creation... (???)
-	// 		...feels like user handlers and feature handlers should be 
-	// 		isolated...
-	// 		XXX setting handlers on the .__proto__ breaks...
+	//		- the actions object...
+	//		- mixin if available...
+	//		- base object (currently implemented)
+	//		...the handlers should theoreticly be stored neither in the 
+	//		instance nor in the mixin but rather in the action-set itself 
+	//		on feature creation... (???)
+	//		...feels like user handlers and feature handlers should be 
+	//		isolated...
+	//		XXX setting handlers on the .__proto__ breaks...
 	setup: function(actions){
 		var that = this
 
@@ -183,7 +183,7 @@ object.Constructor('Feature', {
 
 		// merge config...
 		// NOTE: this will merge the actual config in .config.__proto__
-		// 		keeping the .config clean for the user to lay with...
+		//		keeping the .config clean for the user to lay with...
 		if(this.config != null 
 				|| (this.actions != null 
 					&& this.actions.config != null)){
@@ -214,10 +214,10 @@ object.Constructor('Feature', {
 		return this },
 
 	// XXX need to revise this...
-	// 		- .mixout(..) is available directly from the object while 
-	// 			.remove(..) is not...
-	// 		- might be a good idea to add a specific lifecycle actions to
-	// 			enable feautures to handle their removal correctly... 
+	//		- .mixout(..) is available directly from the object while 
+	//			.remove(..) is not...
+	//		- might be a good idea to add a specific lifecycle actions to
+	//			enable feautures to handle their removal correctly... 
 	remove: function(actions){
 		this.actions != null
 			&& actions.mixout(this.tag || this.actions)
@@ -236,7 +236,7 @@ object.Constructor('Feature', {
 
 
 	// XXX EXPERIMENTAL: if called from a feature-set this will add self
-	// 		to that feature-set...
+	//		to that feature-set...
 	// XXX do we need this to be .__new__(..) and not .__init__(..)
 	__new__: function(context, feature_set, tag, obj){
 		// NOTE: we need to account for context here -- inc length...
@@ -291,7 +291,7 @@ object.Constructor('Feature', {
 		if(obj.handlers){
 			obj.actions = obj.actions || {}
 			// NOTE: obj.actions does not have to be an action so w cheat \
-			// 		a bit here, then copy the mindings...
+			//		a bit here, then copy the mindings...
 			var tmp = Object.create(actions.MetaActions)
 			obj.handlers
 				.forEach(function([a, h]){
@@ -319,7 +319,7 @@ object.Constructor('FeatureSet', {
 	__actions__: actions.Actions,
 
 	// NOTE: a feature is expected to write a reference to itself to the 
-	// 		feature-set (context)...
+	//		feature-set (context)...
 	Feature: Feature,
 
 
@@ -333,28 +333,28 @@ object.Constructor('FeatureSet', {
 
 	// build exclusive groups...
 	//
-	// 	Get all exclusive tags...
-	// 	.getExclusive()
-	// 	.getExclusive('*')
-	// 		-> exclusive
+	//	Get all exclusive tags...
+	//	.getExclusive()
+	//	.getExclusive('*')
+	//		-> exclusive
 	//
-	// 	Get specific exclusive tags...
-	// 	.getExclusive(tag)
-	// 	.getExclusive([tag, ..])
-	// 		-> exclusive
+	//	Get specific exclusive tags...
+	//	.getExclusive(tag)
+	//	.getExclusive([tag, ..])
+	//		-> exclusive
 	//
 	// If features is given, only consider the features in list.
 	// If rev_exclusive is given, also build a reverse exclusive feature
 	// list.
 	//
 	// output format:
-	// 	{
-	// 		exclusive-tag: [
-	// 			feature-tag,
-	// 			...
-	// 		],
-	// 		...
-	// 	}
+	//	{
+	//		exclusive-tag: [
+	//			feature-tag,
+	//			...
+	//		],
+	//		...
+	//	}
 	//
 	getExclusive: function(tag, features, rev_exclusive, isDisabled){
 		tag = tag == null || tag == '*' ? '*'
@@ -376,26 +376,27 @@ object.Constructor('FeatureSet', {
 					.forEach(function(e){
 						// skip tags not explicitly requested...
 						if(tag != '*' && tag.indexOf(e) < 0){
-							return
-						}
-						exclusive[e] = (exclusive[e] || []).concat([k]) 
-						rev_exclusive[k] = (rev_exclusive[k] || []).concat([e]) }) })
+							return }
+						exclusive[e] = 
+							(exclusive[e] || []).concat([k]) 
+						rev_exclusive[k] = 
+							(rev_exclusive[k] || []).concat([e]) }) })
 		return exclusive },
 
 	// Build list of features in load order...
 	//
-	// 	.buildFeatureList()
-	// 	.buildFeatureList('*')
-	// 		-> data
+	//	.buildFeatureList()
+	//	.buildFeatureList('*')
+	//		-> data
 	//
-	// 	.buildFeatureList(feature-tag)
-	// 		-> data
+	//	.buildFeatureList(feature-tag)
+	//		-> data
 	//
-	// 	.buildFeatureList([feature-tag, .. ])
-	// 		-> data
+	//	.buildFeatureList([feature-tag, .. ])
+	//		-> data
 	//
-	// 	.buildFeatureList(.., filter)
-	// 		-> data
+	//	.buildFeatureList(.., filter)
+	//		-> data
 	//
 	//
 	// Requirements:
@@ -419,24 +420,24 @@ object.Constructor('FeatureSet', {
 	//
 	// NOTE: an exclusive group name can be used as an alias.
 	// NOTE: if an alias is used and no feature from that exclusive group
-	// 		is explicitly included then the actual loaded feature will 
-	// 		depend on the load order, which in an async world is not 
-	// 		deterministic...
+	//		is explicitly included then the actual loaded feature will 
+	//		depend on the load order, which in an async world is not 
+	//		deterministic...
 	//
 	//
 	// Algorithm:
-	// 	- expand features:
-	// 		- handle dependencies (detect loops)
-	// 		- handle suggestions
-	// 		- handle explicitly disabled features (detect loops)
-	// 		- handle exclusive feature groups/aliases (handle conflicts)
-	// 	- sort list of features:
-	// 		- by priority
-	// 		- by dependency (detect loops/errors)
+	//	- expand features:
+	//		- handle dependencies (detect loops)
+	//		- handle suggestions
+	//		- handle explicitly disabled features (detect loops)
+	//		- handle exclusive feature groups/aliases (handle conflicts)
+	//	- sort list of features:
+	//		- by priority
+	//		- by dependency (detect loops/errors)
 	//
 	//
 	// Return format:
-	// 	{
+	//	{
 	//		// input feature feature tags...
 	//		input: [ .. ],
 	//
@@ -489,16 +490,16 @@ object.Constructor('FeatureSet', {
 	//			feature-tag: [ feature-tag, .. ],
 	//			..
 	//		},
-	// 	}
+	//	}
 	//
 	// XXX should exclusive conflicts resolve to first (current state)
 	//		feature or last in an exclusive group???
 	// XXX PROBLEM: exclusive feature trees should be resolved accounting 
-	// 		feature applicablility...
-	// 		...in this approach it is impossible...
-	// 		...one way to fix this is to make this interactively check 
-	// 		applicability, i.e. pass a context and check applicablility 
-	// 		when needed...
+	//		feature applicablility...
+	//		...in this approach it is impossible...
+	//		...one way to fix this is to make this interactively check 
+	//		applicability, i.e. pass a context and check applicablility 
+	//		when needed...
 	buildFeatureList: function(lst, isDisabled){
 		var all = this.features
 		lst = (lst == null || lst == '*') ? 
@@ -531,21 +532,21 @@ object.Constructor('FeatureSet', {
 							i = i < 0 ? Infinity : i
 							j = j < 0 ? Infinity : j
 							// NOTE: Infinity - Infinity is NaN, so we need 
-							// 		to guard against it...
+							//		to guard against it...
 							return i - j || 0 })
 						.map(function(e){ return e[0] }) }) }
 
 		// Expand feature references (recursive)...
 		//
 		// NOTE: closures are not used here as we need to pass different
-		// 		stuff into data in different situations...
+		//		stuff into data in different situations...
 		var expand = function(target, lst, store, data, _seen){
 			data = data || {}
 			_seen = _seen || []
 
 			// clear disabled...
 			// NOTE: we do as a separate stage to avoid loading a 
-			// 		feature before it is disabled in the same list...
+			//		feature before it is disabled in the same list...
 			lst = data.disabled ?
 				lst
 					.filter(function(n){
@@ -554,14 +555,16 @@ object.Constructor('FeatureSet', {
 							n = n.slice(1)
 							if(_seen.indexOf(n) >= 0){
 								// NOTE: a disable loop is when a feature tries to disable
-								// 		a feature up in the same chain...
+								//		a feature up in the same chain...
 								// XXX should this break or accumulate???
 								console.warn(`Disable loop detected at "${n}" in chain: ${_seen}`)
-								var loop = _seen.slice(_seen.indexOf(n)).concat([n])
-								data.disable_loops = (data.disable_loops || []).push(loop)
+								var loop = 
+									_seen.slice(_seen.indexOf(n)).concat([n])
+								data.disable_loops = 
+									(data.disable_loops || []).push(loop)
 								return false }
 							// XXX STUB -- need to resolve actual loops and 
-							// 		make the disable global...
+							//		make the disable global...
 							if(n in store){
 								console.warn('Disabling a feature after it is loaded:', n, _seen) }
 							data.disabled.push(n)
@@ -610,8 +613,7 @@ object.Constructor('FeatureSet', {
 						// merge lists...
 						;(target instanceof Array ? target : [target])
 							.forEach(function(t){
-								_lst = _lst.concat(feature[t] || [])
-							})
+								_lst = _lst.concat(feature[t] || []) })
 						store[f] = _lst 
 
 						// traverse down...
@@ -622,24 +624,24 @@ object.Constructor('FeatureSet', {
 		// Expand feature dependencies and suggestions recursively...
 		//
 		// NOTE: this relies on the following values being in the closure:
-		// 		loops			- list of loop chains found
-		// 		disable_loops	- disable loops
-		// 							when a feature containing a disable 
-		// 							directive gets disabled as a result
-		// 		disabled		- list of disabled features
-		// 		missing			- list of missing features
-		// 		missing_suggested
-		// 						- list of missing suggested features and
-		// 							suggested feature dependencies
-		// 		exclusive		- exclusive feature index
-		// 		suggests		- index of feature suggestions (full)
-		// 		suggested		- suggested feature dependency index
+		//		loops			- list of loop chains found
+		//		disable_loops	- disable loops
+		//							when a feature containing a disable 
+		//							directive gets disabled as a result
+		//		disabled		- list of disabled features
+		//		missing			- list of missing features
+		//		missing_suggested
+		//						- list of missing suggested features and
+		//							suggested feature dependencies
+		//		exclusive		- exclusive feature index
+		//		suggests		- index of feature suggestions (full)
+		//		suggested		- suggested feature dependency index
 		// NOTE: the above containers will get updated as a side-effect.
 		// NOTE: all of the above values are defined near the location 
-		// 		they are first used/initiated...
+		//		they are first used/initiated...
 		// NOTE: closures are used here purely for simplicity and conciseness
-		// 		as threading data would not add any flexibility but make 
-		// 		the code more complex...
+		//		as threading data would not add any flexibility but make 
+		//		the code more complex...
 		var expandFeatures = function(lst, features){
 			features = features || {}
 
@@ -711,7 +713,9 @@ object.Constructor('FeatureSet', {
 		// user filter...
 		// NOTE: we build this out of the full feature list...
 		disabled = disabled
-			.concat(isDisabled ? all.filter(isDisabled) : [])
+			.concat(isDisabled ? 
+				all.filter(isDisabled) 
+				: [])
 
 		// build exclusive groups...
 		// XXX need to sort the values to the same order as given features...
@@ -733,7 +737,8 @@ object.Constructor('FeatureSet', {
 				// alias...
 				while(f in exclusive && done.indexOf(f) < 0){
 					var candidates = (exclusive[f] || [])
-						.filter(function(c){ return c in features })
+						.filter(function(c){ 
+							return c in features })
 
 					// resolve alias to non-included feature...
 					if(candidates.length == 0){
@@ -748,18 +753,19 @@ object.Constructor('FeatureSet', {
 
 					// remove the alias...
 					// NOTE: exclusive tag can match a feature tag, thus
-					// 		we do not want to delete such tags...
+					//		we do not want to delete such tags...
 					// NOTE: we are not removing to_remove here as they may
-					// 		get added/expanded back in by other features...
+					//		get added/expanded back in by other features...
 					!(f in that)
 						&& to_remove.push(f)
 					// replace dependencies...
 					Object.keys(features)
 						.forEach(function(e){
-							var i = features[e] ? features[e].indexOf(f) : -1
+							var i = features[e] ? 
+								features[e].indexOf(f) 
+								: -1
 							i >= 0
-								&& features[e].splice(i, 1, target)
-						})
+								&& features[e].splice(i, 1, target) })
 					f = target
 					done.push(f) }
 				
@@ -787,8 +793,8 @@ object.Constructor('FeatureSet', {
 		// Handle disabled features and cleanup...
 
 		// reverse dependency index...
-		// 	...this is used to clear out orphaned features later and for
-		// 	introspection...
+		//	...this is used to clear out orphaned features later and for
+		//	introspection...
 		var rev_features = {}
 		Object.keys(features)
 			.forEach(function(f){
@@ -853,14 +859,14 @@ object.Constructor('FeatureSet', {
 		//
 		// NOTE: this will expand lst in-place...
 		// NOTE: we are not checking for loops here -- mainly because
-		// 		the input is expected to be loop-free...
+		//		the input is expected to be loop-free...
 		var expanddeps = function(lst, cur, seen){
 			seen = seen || []
 			if(features[cur] == null){
 				return }
 			// expand the dep list recursively...
 			// NOTE: this will expand features[cur] in-place while 
-			// 		iterating over it...
+			//		iterating over it...
 			for(var i=0; i < features[cur].length; i++){
 				var f = features[cur][i]
 				if(seen.indexOf(f) < 0){
@@ -878,15 +884,20 @@ object.Constructor('FeatureSet', {
 		// sort by priority...
 		//
 		// NOTE: this will attempt to only move features with explicitly 
-		// 		defined priorities and keep the rest in the same order 
-		// 		when possible...
+		//		defined priorities and keep the rest in the same order 
+		//		when possible...
 		list = list
 			// format: 
-			// 	[ <feature>, <index>, <priority> ]
+			//	[ <feature>, <index>, <priority> ]
 			.map(function(e, i){ 
-				return [e, i, (that[e] && that[e].getPriority) ? that[e].getPriority() : 0 ] })
+				return [e, i, 
+					(that[e] 
+						&& that[e].getPriority) ? 
+							that[e].getPriority() 
+							: 0 ] })
 			.sort(function(a, b){ 
-				return a[2] - b[2] || a[1] - b[1] })
+				return a[2] - b[2] 
+					|| a[1] - b[1] })
 			// cleanup...
 			.map(function(e){ return e[0] })
 			// sort by the order features should be loaded...
@@ -895,7 +906,7 @@ object.Constructor('FeatureSet', {
 		// sort by dependency...
 		//
 		// NOTE: this requires the list to be ordered from high to low 
-		// 		priority, i.e. the same order they should be loaded in...
+		//		priority, i.e. the same order they should be loaded in...
 		// NOTE: dependency loops will throw this into and "infinite" loop...
 		var loop_limit = list.length + 1
 		do {
@@ -907,8 +918,7 @@ object.Constructor('FeatureSet', {
 				.forEach(function(e){
 					var deps = features[e]
 					if(!deps){
-						return
-					}
+						return }
 					var from = list.indexOf(e)
 					var to = list
 						.map(function(f, i){ return [f, i] })
@@ -987,25 +997,25 @@ object.Constructor('FeatureSet', {
 	// This will set .features on the object.
 	//
 	// .features format:
-	// 	{
-	// 		// the current feature set object...
-	// 		// XXX not sure about this -- revise...
-	// 		FeatureSet: feature-set,
+	//	{
+	//		// the current feature set object...
+	//		// XXX not sure about this -- revise...
+	//		FeatureSet: feature-set,
 	//
-	// 		// list of features not applicable in current context...
-	// 		//
-	// 		// i.e. the features that defined .isApplicable(..) and it 
-	// 		// returned false when called.
-	// 		unapplicable: [ feature-tag, .. ],
+	//		// list of features not applicable in current context...
+	//		//
+	//		// i.e. the features that defined .isApplicable(..) and it 
+	//		// returned false when called.
+	//		unapplicable: [ feature-tag, .. ],
 	//
-	// 		// output of .buildFeatureList(..)...
-	// 		...
-	// 	}
+	//		// output of .buildFeatureList(..)...
+	//		...
+	//	}
 	//
 	// NOTE: this will store the build result in .features of the output 
-	// 		actions object.
+	//		actions object.
 	// NOTE: .features is reset even if a FeatureLinearizationError error
-	// 		is thrown.
+	//		is thrown.
 	setup: function(obj, lst){
 		// no explicit object is given...
 		if(lst == null){
@@ -1029,7 +1039,7 @@ object.Constructor('FeatureSet', {
 		features.unapplicable = unapplicable 
 		// cleanup disabled -- filter out unapplicable and excluded features...
 		// NOTE: this is done mainly for cleaner and simpler reporting 
-		// 		later on...
+		//		later on...
 		features.disabled = features.disabled
 			.filter(function(n){ 
 				return unapplicable.indexOf(n) < 0 
@@ -1083,11 +1093,11 @@ object.Constructor('FeatureSet', {
 		return obj },
 
 	// XXX revise...
-	// 		...the main problem here is that .mixout(..) is accesible 
-	// 		directly from actions while the feature .remove(..) method
-	// 		is not...
-	// 		...would be nice to expose the API to actions directly or 
-	// 		keep it only in features...
+	//		...the main problem here is that .mixout(..) is accesible 
+	//		directly from actions while the feature .remove(..) method
+	//		is not...
+	//		...would be nice to expose the API to actions directly or 
+	//		keep it only in features...
 	remove: function(obj, lst){
 		lst = lst.constructor !== Array ? [lst] : lst
 		var that = this
@@ -1115,8 +1125,7 @@ object.Constructor('FeatureSet', {
 				deps.length > 0 ?
 					deps.forEach(function(d){
 						graph += `\t"${f}" -> "${d}";\n` })
-					: (graph += `\t"${f}";\n`)
-			})
+					: (graph += `\t"${f}";\n`) })
 		graph += '}'
 
 		return graph },
@@ -1135,4 +1144,4 @@ module.Features = new FeatureSet()
 
 
 /**********************************************************************
-* vim:set ts=4 sw=4 :                               */ return module })
+* vim:set ts=4 sw=4 :								*/ return module })

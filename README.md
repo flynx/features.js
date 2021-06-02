@@ -1,8 +1,8 @@
 # Features
 
-Features is a module that helps build _features_ out of sets of actions
-apply them to objects and manage sets of features via external criteria
-and feature-to-feature dependencies.
+`features.js` organizes sets of [actions](https://github.com/flynx/actions.js) 
+or _objects_ into features, apply them to objects, manage sets of features via 
+inter-feature dependencies and external criteria.
 
 
 ### The main entities:
@@ -31,57 +31,57 @@ XXX
 **Feature**
 ```javascript
 feature_set.Feature({
-  tag: 'minimal_feature_example',
+    tag: 'minimal_feature_example',
 })
 
 feature_set.Feature({
-  // documentation (optional)...
-  title: 'Example Feature',
-  doc: 'A feature to demo the base API...',
+    // documentation (optional)...
+    title: 'Example Feature',
+    doc: 'A feature to demo the base API...',
 
-  // feature unique identifier (required)...
-  tag: 'feature_example',
+    // feature unique identifier (required)...
+    tag: 'feature_example',
 
-  // applicability test (optional)
-  isApplicable: function(){ /* ... */ },
+    // applicability test (optional)
+    isApplicable: function(){ /* ... */ },
 
-  // feature load priority (optional)
-  priority: 'medium',
+    // feature load priority (optional)
+    priority: 'medium',
 
-  // list of feature tags to load if available (optional)
-  suggested: [],
+    // list of feature tags to load if available (optional)
+    suggested: [],
 
-  // list of feature tags required to load before this feature (optional)
-  depends: [],
+    // list of feature tags required to load before this feature (optional)
+    depends: [],
 
-  // Exclusive tag (optional)
-  // NOTE: a feature can be a member of more than one exclusive group,
-  //	to list more than one use an Array...
-  exclusive: 'Example',
+    // Exclusive tag (optional)
+    // NOTE: a feature can be a member of more than one exclusive group,
+    //	to list more than one use an Array...
+    exclusive: 'Example',
 
-  // feature configuration (optional)
-  // NOTE: if not present here this will be taken from .actions.config
-  // NOTE: this takes priority over .actions.config, it is not recommended
-  //	to define both.
-  config: {
-    option: 'value',
-    // ...
-  },
-
-  // actions (optional)
-  actions: Actions({
-    // alternative configuration location...
+    // feature configuration (optional)
+    // NOTE: if not present here this will be taken from .actions.config
+    // NOTE: this takes priority over .actions.config, it is not recommended
+    //	to define both.
     config: {
-		// ...
-	}
-    // ...
-  })
+    option: 'value',
+        // ...
+    },
 
-  // action handlers (optional)
-  handlers: [
-    ['action.pre', function(){ /* ... */ }],
-    // ...
-  ] 
+    // actions (optional)
+    actions: Actions({
+        // alternative configuration location...
+        config: {
+            // ...
+        },
+        // ...
+    }),
+
+    // action handlers (optional)
+    handlers: [
+        ['action.pre', function(){ /* ... */ }],
+        // ...
+    ],
 })
 ```
 
@@ -93,9 +93,9 @@ XXX
 ```javascript
 // meta-feature...
 feature_set.Feature('meta-feature-tag', [
-  'suggested-feature-tag',
-  'other-suggested-feature-tag',
-  // ...
+    'suggested-feature-tag',
+    'other-suggested-feature-tag',
+    // ...
 ])
 ```
 
