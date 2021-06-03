@@ -1,16 +1,49 @@
-# Features
+# `features.js`
 
 `features.js` organizes sets of [actions](https://github.com/flynx/actions.js) 
-or _objects_ into features, apply them to objects, manage sets of features via 
+or _object methods_ into features, applies them, manages merging of features via 
 inter-feature dependencies and external criteria.
 
 
-### The main entities:
+- [`features.js`](#featuresjs)
+  - [Basics](#basics)
+    - [Organizational structure](#organizational-structure)
+    - [Lifecycle](#lifecycle)
+    - [How features are loaded](#how-features-are-loaded)
+  - [The main entities:](#the-main-entities)
+    - [`FeatureSet(..)`](#featureset)
+    - [`Feature(..)`](#feature)
+    - [Meta-features](#meta-features)
 
-**FeatureSet (Features)**
+
+
+## Basics
 
 ```javascript
-var feature_set = new FeatureSet()
+var features = require('ig-features')
+```
+
+### Organizational structure
+
+<!-- XXX  -->
+
+
+### Lifecycle
+
+<!-- XXX -->
+
+
+### How features are loaded
+
+<!-- XXX algorithm(s) -->
+
+
+## The main entities:
+
+### `FeatureSet(..)`
+
+```javascript
+var feature_set = new features.FeatureSet()
 
 
 // define features...
@@ -19,16 +52,17 @@ var feature_set = new FeatureSet()
 
 // setup features...
 feature_set
-  .setup([
-    'feature-tag',
-    //...
-  ])
+    .setup([
+        'feature-tag',
+        //...
+    ])
 ```
 
 XXX
 
 
-**Feature**
+### `Feature(..)`
+
 ```javascript
 feature_set.Feature({
     tag: 'minimal_feature_example',
@@ -89,7 +123,8 @@ XXX
 
 
 
-**Meta-features**  
+### Meta-features
+
 ```javascript
 // meta-feature...
 feature_set.Feature('meta-feature-tag', [
