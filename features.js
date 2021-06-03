@@ -1021,7 +1021,8 @@ object.Constructor('FeatureSet', {
 		if(lst == null){
 			lst = obj
 			obj = null }
-		obj = obj || (this.__actions__ || actions.Actions)()
+		obj = obj 
+			|| (this.__actions__ || actions.Actions)()
 		lst = lst instanceof Array ? lst : [lst]
 
 		var unapplicable = []

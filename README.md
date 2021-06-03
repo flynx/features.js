@@ -11,7 +11,11 @@ inter-feature dependencies and external criteria.
     - [Lifecycle](#lifecycle)
     - [How features are loaded](#how-features-are-loaded)
   - [The main entities:](#the-main-entities)
-    - [`FeatureSet(..)`](#featureset)
+    - [`FeatureSet()`](#featureset)
+      - [`<feature-set>.features`](#feature-setfeatures)
+      - [`<feature-set>.setup(..)`](#feature-setsetup)
+      - [`<feature-set>.remove(..)`](#feature-setremove)
+      - [`<feature-set>.gvGraph(..)`](#feature-setgvgraph)
     - [`Feature(..)`](#feature)
     - [Meta-features](#meta-features)
 
@@ -25,7 +29,38 @@ var features = require('ig-features')
 
 ### Organizational structure
 
+- `FeatureSet`  
+    Contains features, defines the main feature manipulation API, acts as the target 
+    object constructor/factory.
+- `Feature`  
+    Creates a feature in the feature-set, defines the feature metadata, references 
+    the feature mixin / action set and configuration.
+- `ActionSet` / mixin  
+    Contains the actions/methods of the feature mixin.
+
 <!-- XXX  -->
+
+```javascript
+// feature-set...
+var App = new features.FeatureSet()
+
+// features...
+App.Feature('A', {
+    // ...
+})
+App.Feature('B', {
+    // ...
+})
+
+// meta-features...
+App.Feature('all', [
+    'B',
+    'C',
+])
+
+// init and start the app...
+var app = App.start(['all'])
+```
 
 
 ### Lifecycle
@@ -40,7 +75,12 @@ var features = require('ig-features')
 
 ## The main entities:
 
-### `FeatureSet(..)`
+### `FeatureSet()`
+
+```bnf
+FeatureSet()
+    -> <feature-set>
+```
 
 ```javascript
 var feature_set = new features.FeatureSet()
@@ -60,21 +100,66 @@ feature_set
 
 XXX
 
+#### `<feature-set>.features`
+
+<!-- XXX -->
+
+
+#### `<feature-set>.setup(..)`
+
+<!-- XXX -->
+
+
+#### `<feature-set>.remove(..)`
+
+<!-- XXX -->
+
+
+#### `<feature-set>.gvGraph(..)`
+
+Get a [Graphvis](https://graphviz.org/) graph spec for the feature dependency graph.
+
+<!-- XXX -->
+
+
 
 ### `Feature(..)`
 
+Standalone feature
+```bnf
+Feature({ tag: <tag>, .. })
+Feature(<tag>, { .. })
+Feature(<tag>, [<suggested-tag>, .. ])
+Feature(<tag>, <actions>)
+	-> <feature>
+```
+
+Feature-set features
+```bnf
+<feature-set>.Feature({ tag: <tag>, .. })
+<feature-set>.Feature(<tag>, { .. })
+<feature-set>.Feature(<tag>, [<suggested-tag>, .. ])
+<feature-set>.Feature(<tag>, <actions>)
+	-> <feature>
+    
+Feature(<feature-set>, { tag: <tag>, .. })
+Feature(<feature-set>, <tag>, <actions>)
+	-> <feature>
+```
+
+Examples:
+```javascript
+feature_set.Feature('minimal_feature_example', {})
+```
+
 ```javascript
 feature_set.Feature({
-    tag: 'minimal_feature_example',
-})
+    // feature unique identifier (required)...
+    tag: 'feature_example',
 
-feature_set.Feature({
     // documentation (optional)...
     title: 'Example Feature',
     doc: 'A feature to demo the base API...',
-
-    // feature unique identifier (required)...
-    tag: 'feature_example',
 
     // applicability test (optional)
     isApplicable: function(){ /* ... */ },
@@ -98,7 +183,7 @@ feature_set.Feature({
     // NOTE: this takes priority over .actions.config, it is not recommended
     //	to define both.
     config: {
-    option: 'value',
+        option: 'value',
         // ...
     },
 
@@ -113,7 +198,8 @@ feature_set.Feature({
 
     // action handlers (optional)
     handlers: [
-        ['action.pre', function(){ /* ... */ }],
+        ['action.pre', 
+            function(){ /* ... */ }],
         // ...
     ],
 })
