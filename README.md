@@ -29,17 +29,20 @@ vertically, a-la MVC. As well as horizontally splitting the core functionality
 and extensions, plugins, etc. into separate features.
 
 For example splitting an app into:
-```dot
-digraph {
-    subgraph UI {
-        "Standalone UI"
-        "Web App UI" -> "Web Site UI"
-        "Commandline UI"
-    }
-    UI -> "Data Handling"
-}
 ```
-
++-------------------------------------------------------------------------------+
+|  +---------------+   +------------+    +-------------+    +----------------+  |
+|  | Standalone UI |   | Web App UI |--->| Web Site UI |    | Commandline UI |  |
+|  +---------------+   +------------+    +-------------+    +----------------+  |
++-------+-----------------------------------------------------------------------+
+        |
+        v
+   +---------------+
+   | Data Handling |
+   +---------------+
+```
+Each _feature_ extending the same API but implementing only it's specific 
+functionality, and on setup only the relevant features/functionality is loaded.
 
 
 ## Contents
