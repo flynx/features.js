@@ -47,7 +47,7 @@ functionality, adding new methods where needed, and on setup only the relevant
 features/functionality for a specific runtime are loaded, for example creating 
 the following prototype chains:
 
-<table width="100%">
+<table style="width:100%">
 
 <tr>
 <th>
