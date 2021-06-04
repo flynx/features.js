@@ -1,27 +1,71 @@
 # `features.js`
 
-`features.js` organizes sets of [actions](https://github.com/flynx/actions.js) 
-or _object methods_ into features, applies them, manages merging of features via 
-inter-feature dependencies and external criteria.
+`features.js` organizes sets of [actions] or _object methods_ into features, 
+applies them, manages merging of features via inter-feature dependencies and 
+external criteria.
 
 
+## Basics
+
+If [actions] are a means to organize how methods are extended and called in the 
+prototype chain, `features.js` defined how that prototype chain is built.
+
+A _feature_ defines define a mixin / action-set and metadata:
+- documentation
+- dependencies, both hard and soft on other features
+- load priority
+- applicability tests
+
+This metadata helps automatically build/rebuild a list of applicable features, 
+sort it and mix their actions, configuration into an object.
+
+In contrast to the traditional _manual_ inheritance/prototyping, here the _MRO_ 
+(method resolution order) can self-adapt to the specific runtime requirements 
+depending on feature metadata without the need to manually code prototype 
+chains for each possible scenario.
+
+This makes it trivial to split the desired functionality into _features_ 
+vertically, a-la MVC. As well as horizontally splitting the core functionality 
+and extensions, plugins, etc. into separate features.
+
+For example splitting an app into:
+```dot
+digraph {
+    subgraph UI {
+        "Standalone UI"
+        "Web App UI" -> "Web Site UI"
+        "Commandline UI"
+    }
+    UI -> "Data Handling"
+}
+```
+
+
+
+## Contents
 - [`features.js`](#featuresjs)
   - [Basics](#basics)
+  - [Contents](#contents)
+  - [Installing](#installing)
     - [Organizational structure](#organizational-structure)
     - [Lifecycle](#lifecycle)
     - [How features are loaded](#how-features-are-loaded)
   - [The main entities:](#the-main-entities)
     - [`FeatureSet()`](#featureset)
+      - [`<feature-set>.Feature(..)`](#feature-setfeature)
+      - [`<feature-set>.<feature-tag>` / `<feature-set>[<feature-tag>]`](#feature-setfeature-tag--feature-setfeature-tag)
       - [`<feature-set>.features`](#feature-setfeatures)
       - [`<feature-set>.setup(..)`](#feature-setsetup)
       - [`<feature-set>.remove(..)`](#feature-setremove)
       - [`<feature-set>.gvGraph(..)`](#feature-setgvgraph)
     - [`Feature(..)`](#feature)
     - [Meta-features](#meta-features)
+  - [Extending](#extending)
+  - [License](#license)
 
 
 
-## Basics
+## Installing
 
 ```javascript
 var features = require('ig-features')
@@ -99,6 +143,18 @@ feature_set
 ```
 
 XXX
+
+#### `<feature-set>.Feature(..)`
+
+Feature constructor.
+
+For more info see: [`Feature(..)`](#feature)
+
+
+#### `<feature-set>.<feature-tag>` / `<feature-set>[<feature-tag>]`
+
+<!-- XXX -->
+
 
 #### `<feature-set>.features`
 
@@ -223,5 +279,25 @@ feature_set.Feature('meta-feature-tag', [
 XXX
 
 
+## Extending
+
+<!-- XXX custom mixins (non-action) -->
+
+
+
+
+
+
+## License
+
+[BSD 3-Clause License](./LICENSE)
+
+Copyright (c) 2018+, Alex A. Naanou,
+All rights reserved.
+
+
+<!-- LINKS -->
+
+[actions]: https://github.com/flynx/actions.js
 
 <!-- vim:set ts=4 sw=4 spell : -->
