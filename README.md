@@ -30,16 +30,16 @@ and extensions, plugins, etc. into separate features.
 
 For example splitting an app into:
 ```
-+-UI----------------------------------------------------------------+
-|  +------------+   +---------+    +----------+    +-------------+  |
-|  | Standalone |   | Web App |--->| Web Site |    | Commandline |  |
-|  +------------+   +---------+    +----------+    +-------------+  |
-+-------+-----------------------------------------------------------+
++-UI--------------------------------------------------------------------+
+|  +------------+   +---------+    +--------------+    +-------------+  |
+|  | Standalone |   | Web App |--->| Web Site API |    | Commandline |  |
+|  +------------+   +---------+    +--------------+    +-------------+  |
++-------+---------------------------------------------------------------+
         |
         v
-   +--------------------+
-   | Base Data Handling |
-   +--------------------+
+   +---------------+
+   | Data Handling |
+   +---------------+
 ```
 
 Each _feature_ extending the same base API but implementing only it's specific 
@@ -47,14 +47,17 @@ functionality, adding new methods where needed, and on setup only the relevant
 features/functionality for a specific runtime are loaded, for example creating 
 the following prototype chains:
 
-<table cellspacing=10 border=0 width="100%">
+<table width="100%">
 
 <tr>
 <th>
-Web site 
+    Web site 
 </th>
 <th>
-Standalone app
+    Desktop app
+</th>
+<th>
+    CLI
 </th>
 </tr>
 
@@ -62,14 +65,14 @@ Standalone app
 <td>
 
 ```
-   +-UI-------+
-   | Web Site |
-   +----+-----+
+   +-UI-----------+
+   | Web Site API |
+   +----+---------+
         |
         v
-   +--------------------+
-   | Base Data Handling |
-   +--------------------+
+   +---------------+
+   | Data Handling |
+   +---------------+
 
 
 
@@ -91,9 +94,28 @@ Standalone app
    +----+-------+
         |
         v
-   +--------------------+
-   | Base Data Handling |
-   +--------------------+
+   +---------------+
+   | Data Handling |
+   +---------------+
+```
+
+</td>
+<td>
+
+```
+   +-UI----------+
+   | Commandline |
+   +----+--------+
+        |
+        v
+   +---------------+
+   | Data Handling |
+   +---------------+
+
+
+
+
+
 ```
 
 </td>
