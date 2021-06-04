@@ -44,8 +44,23 @@ For example splitting an app into:
 
 Each _feature_ extending the same base API but implementing only it's specific 
 functionality, adding new methods where needed, and on setup only the relevant 
-features/functionality for a specific runtime are loaded, for example for a 
-Web server context creating the following prototype chain:
+features/functionality for a specific runtime are loaded, for example creating 
+the following prototype chains:
+
+<table width="100%">
+
+<tr>
+<th>
+Web site 
+</th>
+<th>
+Standalone app
+</th>
+</tr>
+
+<tr>
+<td>
+
 ```
    +-UI-------+
    | Web Site |
@@ -55,9 +70,16 @@ Web server context creating the following prototype chain:
    +--------------------+
    | Base Data Handling |
    +--------------------+
+
+
+
+
+
 ```
 
-And for a standalone app:
+</td>
+<td>
+
 ```
    +-UI----------+
    | Commandline |
@@ -73,6 +95,11 @@ And for a standalone app:
    | Base Data Handling |
    +--------------------+
 ```
+
+</td>
+</tr>
+
+</table>
 
 Note that since _JavaScript_ does not support multiple inheritance, the 
 feature dependency _graph_ is linearized when creating a prototype/mixin 
@@ -337,8 +364,9 @@ Copyright (c) 2018+, Alex A. Naanou,
 All rights reserved.
 
 
-<!-- LINKS -->
+<!--------------------------------------------------------------------LINKS--->
 
 [actions]: https://github.com/flynx/actions.js
+
 
 <!-- vim:set ts=4 sw=4 spell : -->
