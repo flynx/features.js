@@ -30,19 +30,57 @@ and extensions, plugins, etc. into separate features.
 
 For example splitting an app into:
 ```
-+-------------------------------------------------------------------------------+
-|  +---------------+   +------------+    +-------------+    +----------------+  |
-|  | Standalone UI |   | Web App UI |--->| Web Site UI |    | Commandline UI |  |
-|  +---------------+   +------------+    +-------------+    +----------------+  |
-+-------+-----------------------------------------------------------------------+
++-UI----------------------------------------------------------------+
+|  +------------+   +---------+    +----------+    +-------------+  |
+|  | Standalone |   | Web App |--->| Web Site |    | Commandline |  |
+|  +------------+   +---------+    +----------+    +-------------+  |
++-------+-----------------------------------------------------------+
         |
         v
-   +---------------+
-   | Data Handling |
-   +---------------+
+   +--------------------+
+   | Base Data Handling |
+   +--------------------+
 ```
-Each _feature_ extending the same API but implementing only it's specific 
-functionality, and on setup only the relevant features/functionality is loaded.
+
+Each _feature_ extending the same base API but implementing only it's specific 
+functionality, adding new methods where needed, and on setup only the relevant 
+features/functionality for a specific runtime are loaded, for example for a 
+Web server context creating the following prototype chain:
+```
+   +-UI-------+
+   | Web Site |
+   +----+-----+
+        |
+        v
+   +--------------------+
+   | Base Data Handling |
+   +--------------------+
+```
+
+And for a standalone app:
+```
+   +-UI----------+
+   | Commandline |
+   +----+--------+
+        |
+        v
+   +-UI---------+
+   | Standalone |
+   +----+-------+
+        |
+        v
+   +--------------------+
+   | Base Data Handling |
+   +--------------------+
+```
+
+Note that since _JavaScript_ does not support multiple inheritance, the 
+feature dependency _graph_ is linearized when creating a prototype/mixin 
+chain.
+
+Also note that this architecture is in part inspired by [Python]'s multiple 
+inheritance implementation, but though similar in some regards, it is quite 
+different in others.
 
 
 ## Contents
