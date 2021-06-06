@@ -5,6 +5,28 @@ applies them, manages merging of features via inter-feature dependencies and
 external criteria.
 
 
+## Contents
+- [`features.js`](#featuresjs)
+  - [Contents](#contents)
+  - [Basics](#basics)
+  - [Installing and usaging](#installing-and-usaging)
+    - [Organizational structure](#organizational-structure)
+    - [Lifecycle](#lifecycle)
+    - [How features are loaded](#how-features-are-loaded)
+  - [The main entities:](#the-main-entities)
+    - [`FeatureSet()`](#featureset)
+      - [`<feature-set>.Feature(..)`](#feature-setfeature)
+      - [`<feature-set>.<feature-tag>` / `<feature-set>[<feature-tag>]`](#feature-setfeature-tag--feature-setfeature-tag)
+      - [`<feature-set>.features`](#feature-setfeatures)
+      - [`<feature-set>.setup(..)`](#feature-setsetup)
+      - [`<feature-set>.remove(..)`](#feature-setremove)
+      - [`<feature-set>.gvGraph(..)`](#feature-setgvgraph)
+    - [`Feature(..)`](#feature)
+    - [Meta-features](#meta-features)
+  - [Extending](#extending)
+  - [License](#license)
+
+
 ## Basics
 
 If [actions] are a means to organize how methods are extended and called in the 
@@ -118,45 +140,34 @@ inheritance implementation, but though similar to it in some regards,
 `features.js` is quite different in others.
 
 
-## Contents
-- [`features.js`](#featuresjs)
-  - [Basics](#basics)
-  - [Contents](#contents)
-  - [Installing](#installing)
-    - [Organizational structure](#organizational-structure)
-    - [Lifecycle](#lifecycle)
-    - [How features are loaded](#how-features-are-loaded)
-  - [The main entities:](#the-main-entities)
-    - [`FeatureSet()`](#featureset)
-      - [`<feature-set>.Feature(..)`](#feature-setfeature)
-      - [`<feature-set>.<feature-tag>` / `<feature-set>[<feature-tag>]`](#feature-setfeature-tag--feature-setfeature-tag)
-      - [`<feature-set>.features`](#feature-setfeatures)
-      - [`<feature-set>.setup(..)`](#feature-setsetup)
-      - [`<feature-set>.remove(..)`](#feature-setremove)
-      - [`<feature-set>.gvGraph(..)`](#feature-setgvgraph)
-    - [`Feature(..)`](#feature)
-    - [Meta-features](#meta-features)
-  - [Extending](#extending)
-  - [License](#license)
 
+## Installing and usaging
 
-
-## Installing
+```shell
+$ npm install --save ig-features
+```
 
 ```javascript
 var features = require('ig-features')
 ```
 
+
 ### Organizational structure
 
 - `FeatureSet`  
-    Contains features, defines the main feature manipulation API, acts as the target 
-    object constructor/factory.
+    Creates `<feature-set>`
+- `<feature-set>` (`FeatureSet`)  
+    Contains features, defines the main feature manipulation API and 
+    `<object-w-features>` constructor/factory.
 - `Feature`  
     Creates a feature in the feature-set, defines the feature metadata, references 
     the feature mixin / action set and configuration.
 - `ActionSet` / mixin  
-    Contains the actions/methods of the feature mixin.
+    Contains the actions/methods of the feature mixin.  
+    See [actions] for more details.
+- `<object-w-features>` (`ActionSet`)  
+    Instance constructed by `<feature-set>` with all the feature action sets in
+    the prototype chain and a merged `.config`.  
 
 <!-- XXX  -->
 
@@ -249,7 +260,7 @@ For more info see: [`Feature(..)`](#feature)
 
 #### `<feature-set>.gvGraph(..)`
 
-Get a [Graphvis](https://graphviz.org/) graph spec for the feature dependency graph.
+Generate a [Graphvis] graph spec for the feature dependency graph.
 
 <!-- XXX -->
 
@@ -374,7 +385,10 @@ All rights reserved.
 
 <!--------------------------------------------------------------------LINKS--->
 
+[ig-actions]: https://github.com/flynx/actions.js
 [actions]: https://github.com/flynx/actions.js
+[python]: https://www.python.org/
+[graphvis]: https://graphviz.org/
 
 
 <!-- vim:set ts=4 sw=4 spell : -->
