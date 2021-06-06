@@ -12,9 +12,9 @@ prototype chain, `features.js` defined how that prototype chain is built.
 
 A _feature_ defines define a mixin / action-set and metadata:
 - documentation
-- dependencies, both hard and soft on other features
+- applicability testing
+- dependencies both hard and soft
 - load priority
-- applicability tests
 
 This metadata helps automatically build/rebuild a list of applicable features, 
 sort it and mix their actions, configuration into an object.
@@ -43,26 +43,20 @@ For example splitting an app into:
 ```
 
 Each _feature_ extending the same base API but implementing only it's specific 
-functionality, adding new methods where needed, and on setup only the relevant 
+functionality and adding new methods where needed. On setup only the relevant 
 features/functionality for a specific runtime are loaded, for example creating 
-the following prototype chains:
+one the following prototype chains depending on context:
 
-<table width="100%">
-
-<tr>
-<th>
+<table width="100%"><tr><th>
     Web site 
-</th>
-<th>
-    Desktop app
-</th>
-<th>
-    CLI
-</th>
-</tr>
 
-<tr>
-<td>
+</th><th>
+    Desktop app
+
+</th><th>
+    Console
+
+</th></tr><tr><td>
 
 ```
    +-UI-----------+
@@ -79,9 +73,7 @@ the following prototype chains:
 
 
 ```
-
-</td>
-<td>
+</td><td>
 
 ```
    +-UI----------+
@@ -98,9 +90,7 @@ the following prototype chains:
    | Data Handling |
    +---------------+
 ```
-
-</td>
-<td>
+</td><td>
 
 ```
    +-UI----------+
@@ -117,19 +107,15 @@ the following prototype chains:
 
 
 ```
-
-</td>
-</tr>
-
-</table>
+</td></tr></table>
 
 Note that since _JavaScript_ does not support multiple inheritance, the 
 feature dependency _graph_ is linearized when creating a prototype/mixin 
 chain.
 
 Also note that this architecture is in part inspired by [Python]'s multiple 
-inheritance implementation, but though similar in some regards, it is quite 
-different in others.
+inheritance implementation, but though similar to it in some regards, 
+`features.js` is quite different in others.
 
 
 ## Contents
