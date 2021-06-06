@@ -9,7 +9,7 @@ external criteria.
 - [`features.js`](#featuresjs)
   - [Contents](#contents)
   - [Basics](#basics)
-  - [Installing and usaging](#installing-and-usaging)
+  - [Installing and using](#installing-and-using)
     - [Organizational structure](#organizational-structure)
     - [Lifecycle](#lifecycle)
     - [How features are loaded](#how-features-are-loaded)
@@ -141,7 +141,7 @@ inheritance implementation, but though similar to it in some regards,
 
 
 
-## Installing and usaging
+## Installing and using
 
 ```shell
 $ npm install --save ig-features
