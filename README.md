@@ -151,6 +151,8 @@ $ npm install --save ig-features
 var features = require('ig-features')
 ```
 
+<!-- XXX -->
+
 
 ### Organizational structure
 
