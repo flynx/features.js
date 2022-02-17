@@ -1115,7 +1115,6 @@ object.Constructor('FeatureSet', {
 	gvGraph: function(lst, dep){
 		lst = lst || this.features
 		dep = dep || this
-
 		var graph = ''
 		graph += 'digraph ImageGrid {\n'
 		lst
@@ -1128,7 +1127,6 @@ object.Constructor('FeatureSet', {
 						graph += `\t"${f}" -> "${d}";\n` })
 					: (graph += `\t"${f}";\n`) })
 		graph += '}'
-
 		return graph },
 })
 
